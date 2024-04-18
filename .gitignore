@@ -153,3 +153,7 @@ cython_debug/
 
 #Carpeta donde se encuentran los videos de prueba
 /videos/test
+
+#Carpeta donde se encuentran los resultados de trakear el video
+/resultados/video
+/resultados/documents

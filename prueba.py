@@ -25,9 +25,9 @@ else:
     print("No se encontraron archivos con el nombre 'biscep2.mp4' en ninguna subcarpeta dentro de 'videos'.")
 
 VIDEO_PATH = video_path
-OUTPUT_VIDEO_PATH = 'resultados/tracked_video.mp4'
-OUTPUT_CSV_PATH = 'resultados/data.csv'
-OUTPUT_POLAR_CSV_PATH = 'resultados/polar_data.csv'
+OUTPUT_VIDEO_PATH = 'resultados/video/tracked_video.mp4'
+OUTPUT_CSV_PATH = 'resultados//documents/data.csv'
+OUTPUT_POLAR_CSV_PATH = 'resultados/documents/polar_data.csv'
 FPS= 30
 
 cap = cv2.VideoCapture(VIDEO_PATH)
