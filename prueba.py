@@ -6,13 +6,13 @@ import mediapipe as mp
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
 
-video_path = 'videos/biscep2.mp4'
-output_video_path = 'resultados/tracked_video.mp4'
-output_csv_path = 'resultados/data.csv'
-output_polar_csv_path = 'resultados/polar_data.csv'
+VIDEO_PATH = 'videos/biscep2.mp4'
+OUTPUT_VIDEO_PATH = 'resultados/tracked_video.mp4'
+OUTPUT_CSV_PATH = 'resultados/data.csv'
+OUTPUT_POLAR_CSV_PATH = 'resultados/polar_data.csv'
 FPS= 30
 
-cap = cv2.VideoCapture(video_path)
+cap = cv2.VideoCapture(VIDEO_PATH)
 
 # Definir los landmarks de interés
 landmarks_of_interest = [mp_pose.PoseLandmark.LEFT_SHOULDER,
@@ -34,9 +34,9 @@ for landmark in landmarks_of_interest:
 pose_data_polar = pd.DataFrame(columns=columns_polar)
 
 pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
-video_writer = cv2.VideoWriter(output_video_path, cv2.VideoWriter_fourcc(*'mp4v'), FPS, (int(cap.get(3)), int(cap.get(4))))
+video_writer = cv2.VideoWriter(OUTPUT_VIDEO_PATH, cv2.VideoWriter_fourcc(*'mp4v'), FPS, (int(cap.get(3)), int(cap.get(4))))
 
-frame_number = 0
+FRAME_NUMBER = 0
 
 while cap.isOpened():
     ret, frame = cap.read()
@@ -57,13 +57,13 @@ while cap.isOpened():
                               mp_drawing.DrawingSpec(color=(245, 66, 230), thickness=2, circle_radius=2)
                               )
     # Dibujar el número de frame (Para relacionar con precisión los datos obtenidos con el momento exacto del video)
-    cv2.putText(image, f'Frame: {frame_number}', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+    cv2.putText(image, f'Frame: {FRAME_NUMBER}', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
 
     # Guardar el cuadro procesado en el video de salida
     video_writer.write(cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
 
     # Recolectar los datos de la pose (coordenadas cartesianas) en el DataFrame
-    pose_row_cartesian = {'frame_number': frame_number,'tiempo(seg)': frame_number/FPS}
+    pose_row_cartesian = {'frame_number': FRAME_NUMBER,'tiempo(seg)': FRAME_NUMBER/FPS}
     if results.pose_landmarks:
         # Obtener las coordenadas del codo
         elbow_x = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].x
@@ -84,7 +84,7 @@ while cap.isOpened():
     pose_data_cartesian = pd.concat([pose_data_cartesian, pd.DataFrame([pose_row_cartesian])], ignore_index=True)
 
     # Calcular las coordenadas polares y almacenarlas en el DataFrame correspondiente
-    pose_row_polar = {'frame_number': frame_number,'tiempo(seg)': frame_number/FPS}
+    pose_row_polar = {'frame_number': FRAME_NUMBER,'tiempo(seg)': FRAME_NUMBER/FPS}
     if results.pose_landmarks:
         for landmark in landmarks_of_interest:
             rel_x = pose_row_cartesian[landmark.name + '_x']
@@ -101,16 +101,16 @@ while cap.isOpened():
 
     pose_data_polar = pd.concat([pose_data_polar, pd.DataFrame([pose_row_polar])], ignore_index=True)
 
-    frame_number += 1
+    FRAME_NUMBER += 1
 
 pose.close()
 video_writer.release()
 cap.release()
 
 # Guardar los DataFrames como archivos CSV
-pose_data_cartesian.to_csv(output_csv_path, index=False)
-pose_data_polar.to_csv(output_polar_csv_path, index=False)
+pose_data_cartesian.to_csv(OUTPUT_CSV_PATH, index=False)
+pose_data_polar.to_csv(OUTPUT_POLAR_CSV_PATH, index=False)
 
-print("Proceso completado. Video trackeado guardado en:", output_video_path)
-print("Datos de la pose (cartesianas) guardados en:", output_csv_path)
-print("Datos de la pose (polares) guardados en:", output_polar_csv_path)
+print("Proceso completado. Video trackeado guardado en:", OUTPUT_VIDEO_PATH)
+print("Datos de la pose (cartesianas) guardados en:", OUTPUT_CSV_PATH)
+print("Datos de la pose (polares) guardados en:", OUTPUT_POLAR_CSV_PATH)
