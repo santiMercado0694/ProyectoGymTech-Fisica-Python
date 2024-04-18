@@ -12,7 +12,7 @@ mp_pose = mp.solutions.pose
 BASE_DIR = 'videos'
 
 # Patrón de búsqueda
-search_pattern = os.path.join(BASE_DIR, '**', 'biscep2.mp4')
+search_pattern = os.path.join(BASE_DIR, '**', 'biceps1.mp4')
 
 # Buscar el archivo
 video_files = glob.glob(search_pattern, recursive=True)
