@@ -4,6 +4,9 @@ import cv2
 from PIL import Image, ImageTk
 
 class VideoPlayerApp:
+
+    frameNumber = 0
+
     def __init__(self, master):
         self.master = master
         self.master.title("Reproductor de Video")
@@ -43,6 +46,14 @@ class VideoPlayerApp:
         self.load_image()
         self.show_image()
 
+        # Slider
+        self.slider = tk.Scale(from_=0, to=2000, orient=tk.HORIZONTAL)
+        self.slider.pack(fill=tk.X)
+
+    def update_slider_position(self,val):
+        # Actualizar la posición del slider a 50
+        self.slider.set(val)
+
     def open_video(self):
         self.video_path = filedialog.askopenfilename(filetypes=[("Archivos de Video", "*.mp4;*.avi;*.mkv")])
         if self.video_path:
@@ -56,6 +67,7 @@ class VideoPlayerApp:
             self.btn_play.config(state=tk.DISABLED)
             self.btn_stop.config(state=tk.NORMAL)
             self.show_frame()
+            print("hola")
 
     def stop_video(self):
         if self.video_cap:
@@ -74,8 +86,12 @@ class VideoPlayerApp:
             self.video_label.config(image=img_tk)
             if self.is_playing:
                 self.video_label.after(30, self.show_frame)
+            self.update_slider_position(self.frameNumber)
+            self.frameNumber += 1
         else:
             self.stop_video()
+        print(self.frameNumber)
+        
 
     def load_image(self):
         # Cargar una imagen desde el archivo
