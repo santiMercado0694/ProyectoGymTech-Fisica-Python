@@ -91,9 +91,7 @@ class VideoPlayerApp:
             self.update_slider_position(self.frameNumber)
             self.frameNumber += 1
         else:
-            self.stop_video()
-        print(self.frameNumber)
-        
+            self.stop_video()        
 
     def load_image(self):
         # Cargar una imagen desde el archivo
