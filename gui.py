@@ -79,7 +79,10 @@ class VideoPlayerApp:
     def show_frame(self):
         ret, frame = self.video_cap.read()
         if ret:
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            # Redimensionar el fotograma para hacerlo más pequeño
+            frame_resized = cv2.resize(frame, (600, 450))
+
+            frame_rgb = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
             img = Image.fromarray(frame_rgb)
             img_tk = ImageTk.PhotoImage(image=img)
             self.video_label.img_tk = img_tk
