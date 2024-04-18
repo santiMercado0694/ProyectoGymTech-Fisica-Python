@@ -67,7 +67,6 @@ class VideoPlayerApp:
             self.btn_play.config(state=tk.DISABLED)
             self.btn_stop.config(state=tk.NORMAL)
             self.show_frame()
-            print("hola")
 
     def stop_video(self):
         if self.video_cap:
@@ -79,7 +78,7 @@ class VideoPlayerApp:
     def show_frame(self):
         ret, frame = self.video_cap.read()
         if ret:
-            # Redimensionar el fotograma para hacerlo más pequeño
+            # Redimensionar el fotograma
             frame_resized = cv2.resize(frame, (600, 450))
 
             frame_rgb = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
