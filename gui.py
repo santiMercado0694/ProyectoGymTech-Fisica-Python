@@ -7,6 +7,7 @@ import prueba
 class VideoPlayerApp:
 
     frameNumber = 0
+    frames = 0
 
     def __init__(self, master):
         self.master = master
@@ -47,9 +48,7 @@ class VideoPlayerApp:
         self.load_image()
         self.show_image()
 
-        # Slider
-        self.slider = tk.Scale(from_=0, to=2000, orient=tk.HORIZONTAL)
-        self.slider.pack(fill=tk.X)
+        
 
     def update_slider_position(self,val):
         # Actualizar la posición del slider a 50
@@ -63,6 +62,9 @@ class VideoPlayerApp:
             prueba.track_pose(self.video_path)
             # Abre el video generado
             self.video_cap = cv2.VideoCapture('resultados\\video\\tracked_video.mp4')
+            self.frames = int(self.video_cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            self.slider = tk.Scale(from_=0, to=self.frames, orient=tk.HORIZONTAL)
+            self.slider.pack(fill=tk.X)
             self.btn_play.config(state=tk.NORMAL)
             self.btn_stop.config(state=tk.NORMAL)
 
