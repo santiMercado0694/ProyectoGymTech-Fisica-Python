@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import filedialog
 import cv2
 from PIL import Image, ImageTk
+import prueba
 
 class VideoPlayerApp:
 
@@ -57,9 +58,18 @@ class VideoPlayerApp:
     def open_video(self):
         self.video_path = filedialog.askopenfilename(filetypes=[("Archivos de Video", "*.mp4;*.avi;*.mkv")])
         if self.video_path:
-            self.video_cap = cv2.VideoCapture(self.video_path)
+            # Llama a la funcion track_pose de prueba.py
+            prueba.video_ready_callback = self.video_ready_callback
+            prueba.track_pose(self.video_path)
+            # Abre el video generado
+            self.video_cap = cv2.VideoCapture('resultados\\video\\tracked_video.mp4')
             self.btn_play.config(state=tk.NORMAL)
             self.btn_stop.config(state=tk.NORMAL)
+
+    # Funcion auxiliar para que compruebe que se genero el video 
+    def video_ready_callback(self):
+        self.btn_play.config(state=tk.NORMAL)
+        self.btn_stop.config(state=tk.NORMAL)
 
     def play_video(self):
         if self.video_cap:
@@ -80,7 +90,6 @@ class VideoPlayerApp:
         if ret:
             # Redimensionar el fotograma
             frame_resized = cv2.resize(frame, (600, 450))
-
             frame_rgb = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
             img = Image.fromarray(frame_rgb)
             img_tk = ImageTk.PhotoImage(image=img)
