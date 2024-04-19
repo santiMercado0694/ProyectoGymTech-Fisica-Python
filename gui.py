@@ -51,20 +51,25 @@ class VideoPlayerApp:
         
 
     def update_slider_position(self,val):
-        # Actualizar la posición del slider a 50
+        # Actualizar la posición del slider
         self.slider.set(val)
 
     def open_video(self):
         self.video_path = filedialog.askopenfilename(filetypes=[("Archivos de Video", "*.mp4;*.avi;*.mkv")])
         if self.video_path:
+            
             # Llama a la funcion track_pose de prueba.py
             prueba.video_ready_callback = self.video_ready_callback
             prueba.track_pose(self.video_path)
+
             # Abre el video generado
             self.video_cap = cv2.VideoCapture('resultados\\video\\tracked_video.mp4')
+
+            # Consigo los frames totales para generar el slider con ese numero maximo
             self.frames = int(self.video_cap.get(cv2.CAP_PROP_FRAME_COUNT))
             self.slider = tk.Scale(from_=0, to=self.frames, orient=tk.HORIZONTAL)
             self.slider.pack(fill=tk.X)
+
             self.btn_play.config(state=tk.NORMAL)
             self.btn_stop.config(state=tk.NORMAL)
 
