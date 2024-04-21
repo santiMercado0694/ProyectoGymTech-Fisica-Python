@@ -25,16 +25,16 @@ class VideoPlayerApp:
         self.video_frame.pack(padx=10, pady=10)
 
         self.btn_open = tk.Button(self.video_frame, text="Seleccionar Video", command=self.open_video)
-        self.btn_open.pack(pady=10)
+        self.btn_open.grid(column=0,row=0)
 
-        self.btn_play = tk.Button(self.video_frame, text="Reproducir", command=self.play_video, state=tk.DISABLED)
-        self.btn_play.pack(pady=5)
+        self.btn_play = tk.Button(self.video_frame, text="\u23F5", command=self.play_video, state=tk.DISABLED)
+        self.btn_play.grid(column=1,row=0)
 
-        self.btn_stop = tk.Button(self.video_frame, text="Detener", command=self.stop_video, state=tk.DISABLED)
-        self.btn_stop.pack(pady=5)
+        self.btn_stop = tk.Button(self.video_frame, text="\u23F8", command=self.stop_video, state=tk.DISABLED)
+        self.btn_stop.grid(column=2,row=0)
 
         self.video_label = tk.Label(self.video_frame)
-        self.video_label.pack(side=tk.LEFT)
+        self.video_label.grid(column=1,row=1)
 
         # Frame para la imagen adicional a la derecha
         self.image_frame = tk.Frame(self.master)
@@ -65,13 +65,20 @@ class VideoPlayerApp:
             # Abre el video generado
             self.video_cap = cv2.VideoCapture('resultados\\video\\tracked_video.mp4')
 
-            # Consigo los frames totales para generar el slider con ese numero maximo
+            # Consigue los frames totales para generar el slider con ese numero maximo
             self.frames = int(self.video_cap.get(cv2.CAP_PROP_FRAME_COUNT))
-            self.slider = tk.Scale(from_=0, to=self.frames, orient=tk.HORIZONTAL)
+            self.slider = tk.Scale(from_=0, to=self.frames, orient=tk.HORIZONTAL, command=self.on_slider_changed)
             self.slider.pack(fill=tk.X)
 
             self.btn_play.config(state=tk.NORMAL)
             self.btn_stop.config(state=tk.NORMAL)
+
+    # Actualizar el fotograma actual del video según el valor del slider SOLO si el video esta pausado
+    def on_slider_changed(self, val):
+        if not self.is_playing:
+            self.frameNumber = int(val)
+            self.video_cap.set(cv2.CAP_PROP_POS_FRAMES, self.frameNumber)
+            self.show_frame()
 
     # Funcion auxiliar para que compruebe que se genero el video 
     def video_ready_callback(self):
@@ -90,7 +97,6 @@ class VideoPlayerApp:
             self.is_playing = False
             self.btn_play.config(state=tk.NORMAL)
             self.btn_stop.config(state=tk.DISABLED)
-            self.video_cap.release()
 
     def show_frame(self):
         ret, frame = self.video_cap.read()
