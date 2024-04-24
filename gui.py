@@ -5,7 +5,6 @@ from PIL import Image, ImageTk
 import prueba
 
 class VideoPlayerApp:
-
     frameNumber = 0
     frames = 0
 
@@ -33,6 +32,9 @@ class VideoPlayerApp:
         self.btn_stop = tk.Button(self.video_frame, text="\u23F8", command=self.stop_video, state=tk.DISABLED)
         self.btn_stop.grid(column=2,row=0)
 
+        self.btn_restart = tk.Button(self.video_frame, text="\u23F9", command=self.restart_video, state=tk.DISABLED)  # Botón de reinicio
+        self.btn_restart.grid(column=3,row=0)
+
         self.video_label = tk.Label(self.video_frame)
         self.video_label.grid(column=1,row=1)
 
@@ -48,8 +50,6 @@ class VideoPlayerApp:
         self.load_image()
         self.show_image()
 
-        
-
     def update_slider_position(self,val):
         # Actualizar la posición del slider
         self.slider.set(val)
@@ -57,7 +57,6 @@ class VideoPlayerApp:
     def open_video(self):
         self.video_path = filedialog.askopenfilename(filetypes=[("Archivos de Video", "*.mp4;*.avi;*.mkv")])
         if self.video_path:
-            
             # Llama a la funcion track_pose de prueba.py
             prueba.video_ready_callback = self.video_ready_callback
             prueba.track_pose(self.video_path)
@@ -72,6 +71,7 @@ class VideoPlayerApp:
 
             self.btn_play.config(state=tk.NORMAL)
             self.btn_stop.config(state=tk.NORMAL)
+            self.btn_restart.config(state=tk.NORMAL)  # Activar el botón de reinicio
 
     # Actualizar el fotograma actual del video según el valor del slider SOLO si el video esta pausado
     def on_slider_changed(self, val):
@@ -84,6 +84,7 @@ class VideoPlayerApp:
     def video_ready_callback(self):
         self.btn_play.config(state=tk.NORMAL)
         self.btn_stop.config(state=tk.NORMAL)
+        self.btn_restart.config(state=tk.NORMAL)  # Activar el botón de reinicio
 
     def play_video(self):
         if self.video_cap:
@@ -95,6 +96,14 @@ class VideoPlayerApp:
     def stop_video(self):
         if self.video_cap:
             self.is_playing = False
+            self.btn_play.config(state=tk.NORMAL)
+            self.btn_stop.config(state=tk.DISABLED)
+
+    def restart_video(self):
+        if self.video_cap:
+            self.frameNumber = 0
+            self.video_cap.set(cv2.CAP_PROP_POS_FRAMES, self.frameNumber)
+            self.show_frame()
             self.btn_play.config(state=tk.NORMAL)
             self.btn_stop.config(state=tk.DISABLED)
 
