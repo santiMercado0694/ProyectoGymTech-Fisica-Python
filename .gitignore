@@ -157,5 +157,6 @@ cython_debug/
 #Carpeta donde se encuentran los resultados de trakear el video
 /resultados/video
 /resultados/documents
+/resultados/graficos
 
 
