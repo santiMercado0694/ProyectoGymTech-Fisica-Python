@@ -3,9 +3,9 @@ import matplotlib.pyplot as plt
 
 def generarGrafico(tiempo,posicion):
     plt.plot(tiempo, posicion, marker='o', linestyle='-')
-    plt.title('Gráfico de posicion_x_metros/tiempo')
+    plt.title('Posicion_x_muñeca')
     plt.xlabel('Tiempo')
-    plt.ylabel('Posicion X_metros')
+    plt.ylabel('Metros')
     plt.grid(True)
     plt.savefig('resultados/graficos/posicion_x_muñeca.png')
     #plt.show()
