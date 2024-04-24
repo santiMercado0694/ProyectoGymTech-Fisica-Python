@@ -19,36 +19,41 @@ class VideoPlayerApp:
         self.create_widgets()
 
     def create_widgets(self):
-        # Frame principal para el reproductor de video
-        self.video_frame = tk.Frame(self.master)
-        self.video_frame.pack(padx=10, pady=10)
+     # Frame principal para el reproductor de video
+     self.video_frame = tk.Frame(self.master)
+     self.video_frame.pack(padx=10, pady=10)
 
-        self.btn_open = tk.Button(self.video_frame, text="Seleccionar Video", command=self.open_video)
-        self.btn_open.grid(column=0,row=0)
+     self.btn_open = tk.Button(self.video_frame, text="Seleccionar Video", command=self.open_video)
+     self.btn_open.grid(column=0, row=0)
 
-        self.btn_play = tk.Button(self.video_frame, text="\u23F5", command=self.play_video, state=tk.DISABLED)
-        self.btn_play.grid(column=1,row=0)
+     # Frame para los botones de control (play, pause, restart)
+     self.control_frame = tk.Frame(self.video_frame)
+     self.control_frame.grid(column=1, row=0)
 
-        self.btn_stop = tk.Button(self.video_frame, text="\u23F8", command=self.stop_video, state=tk.DISABLED)
-        self.btn_stop.grid(column=2,row=0)
+     self.btn_play = tk.Button(self.control_frame, text="\u23F5", command=self.play_video, state=tk.DISABLED)
+     self.btn_play.pack(side=tk.LEFT)
 
-        self.btn_restart = tk.Button(self.video_frame, text="\u23F9", command=self.restart_video, state=tk.DISABLED)  # Botón de reinicio
-        self.btn_restart.grid(column=3,row=0)
+     self.btn_stop = tk.Button(self.control_frame, text="\u23F8", command=self.stop_video, state=tk.DISABLED)
+     self.btn_stop.pack(side=tk.LEFT)
 
-        self.video_label = tk.Label(self.video_frame)
-        self.video_label.grid(column=1,row=1)
+     self.btn_restart = tk.Button(self.control_frame, text="\u23F9", command=self.restart_video, state=tk.DISABLED)
+     self.btn_restart.pack(side=tk.LEFT)
 
-        # Frame para la imagen adicional a la derecha
-        self.image_frame = tk.Frame(self.master)
-        self.image_frame.pack(padx=10, pady=10)
+     self.video_label = tk.Label(self.video_frame)
+     self.video_label.grid(column=1, row=1)
 
-        # Crear un label para la imagen
-        self.image_label = tk.Label(self.image_frame)
-        self.image_label.pack()
+     # Frame para la imagen adicional a la derecha
+     self.image_frame = tk.Frame(self.master)
+     self.image_frame.pack(padx=10, pady=10)
 
-        # Cargar y mostrar la imagen en el frame
-        self.load_image()
-        self.show_image()
+     # Crear un label para la imagen
+     self.image_label = tk.Label(self.image_frame)
+     self.image_label.pack()
+
+     # Cargar y mostrar la imagen en el frame
+     self.load_image()
+     self.show_image()
+
 
     def update_slider_position(self,val):
         # Actualizar la posición del slider
