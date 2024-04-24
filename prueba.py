@@ -11,22 +11,6 @@ video_ready_callback = None
 
 def track_pose(video_path):
 
-    # Directorio base
-    BASE_DIR = 'videos'
-
-    # Patrón de búsqueda
-    search_pattern = os.path.join(BASE_DIR, '**', 'biceps1.mp4')
-
-    # Buscar el archivo
-    video_files = glob.glob(search_pattern, recursive=True)
-    # Verificar si se encontró al menos un archivo
-    if video_files:
-        # Guardar la primera ruta encontrada en una variable
-        video_path = video_files[0]
-        print("Path del primer archivo encontrado:", video_path)
-    else:
-        print("No se encontraron archivos con el nombre 'biscep2.mp4' en ninguna subcarpeta dentro de 'videos'.")
-
     VIDEO_PATH = video_path
     OUTPUT_VIDEO_PATH = 'resultados/video/tracked_video.mp4'
     OUTPUT_CSV_PATH = 'resultados//documents/data.csv'
