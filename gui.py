@@ -49,10 +49,10 @@ class VideoPlayerApp:
 
         # Crear un label para la imagen
         self.image_label = tk.Label(self.image_frame)
-        self.image_label.pack()
-
-        # Cargar y mostrar la imagen en el frame
-        self.load_image()
+        self.image_label.pack() 
+        
+        # Cargamos la imagen de presentación
+        self.load_image("loadImage.png")
         self.show_image()
 
     def update_slider_position(self, val):
@@ -79,6 +79,13 @@ class VideoPlayerApp:
         self.slider = tk.Scale(from_=0, to=self.frames - 1, orient=tk.HORIZONTAL, command=self.on_slider_changed)
         self.slider.pack(fill=tk.X)
         
+        # Ejecuta graficos.py para generar los graficos correspondientes
+        exec(open('graficos.py').read(),globals())
+        
+        # Cargar y mostrar el gráfico en el frame
+        self.load_image("resultados/graficos/subgraficos.png" )
+        self.show_image()
+        
     def on_slider_changed(self, val):
         if not self.is_playing:
             self.frameNumber = int(val)
@@ -96,8 +103,6 @@ class VideoPlayerApp:
 
     def play_video(self):
         if self.video_cap:
-            # Ejecuta graficos.py para generar los graficos correspondientes
-            exec(open('graficos.py').read(),globals())
             self.is_playing = True
             self.btn_play.config(state=tk.DISABLED)
             self.btn_stop.config(state=tk.NORMAL)
@@ -123,7 +128,7 @@ class VideoPlayerApp:
         ret, frame = self.video_cap.read()
         if ret:
             # Redimensionar el fotograma
-            frame_resized = cv2.resize(frame, (450, 300))
+            frame_resized = cv2.resize(frame, (400, 250))
             frame_rgb = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
             img = Image.fromarray(frame_rgb)
             img_tk = ImageTk.PhotoImage(image=img)
@@ -143,15 +148,15 @@ class VideoPlayerApp:
         else:
             self.stop_video()
 
-    def load_image(self):
+    def load_image(self,ruta):
         # Cargar una imagen desde el archivo
-        self.image_path = "plot.png"  # aca va la ruta de los graficos
+        self.image_path = ruta 
         self.image = Image.open(self.image_path)
 
     def show_image(self):
         # Mostrar la imagen en el frame
         image_width, image_height = self.image.size
-        resized_image = self.image.resize((int(image_width / 2), int(image_height / 2)))  # Ajustar el tamaño de la imagen
+        resized_image = self.image.resize((int(image_width / 2), int(image_height / 2.5)))  # Ajustar el tamaño de la imagen
         self.img_tk = ImageTk.PhotoImage(resized_image)
         self.image_label.config(image=self.img_tk)
         self.image_label.image = self.img_tk
