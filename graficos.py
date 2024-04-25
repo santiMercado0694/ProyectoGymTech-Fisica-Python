@@ -13,6 +13,22 @@ def generarSubgraficos(tiempo, datos, titulos, unidades):
     plt.savefig('resultados/graficos/subgraficos.png')
     print("Grafico de subgraficos guardado en resultados/graficos/subgraficos.png")
 
+def generarGraficos(tiempo, datos, titulos, unidades):
+    # Crear el directorio si no existe
+    for i, (dato, titulo, unidad) in enumerate(zip(datos, titulos, unidades)):
+        fig, ax = plt.subplots(figsize=(6, 4))
+        ax.plot(tiempo, dato, marker='o', linestyle='-')
+        ax.set_title(titulo)
+        ax.set_xlabel('Tiempo(seg)')
+        ax.set_ylabel(unidad)
+        ax.grid(True)
+        
+        # Guardar el gráfico con el nombre correspondiente
+        filename = f'resultados/graficos/{titulo.replace(" ", "_").lower()}.png'
+        plt.savefig(filename)
+        print(f"Grafico guardado en {filename}")
+        plt.close()
+
 def createNewDataframe():
     dataframe = pd.read_csv('resultados/documents/data.csv', index_col=[0])
     df2 = pd.DataFrame()
@@ -34,6 +50,6 @@ def createNewDataframe():
     titulos = ['Posicion X Muneca', 'Posicion Y Muneca', 'Velocidad X Muneca', 'Velocidad Y Muneca']
     unidades = ['m', 'm', 'm/s', 'm/s']
 
-    generarSubgraficos(tiempo, datos, titulos, unidades)
+    generarGraficos(tiempo, datos, titulos, unidades)
 
 createNewDataframe()

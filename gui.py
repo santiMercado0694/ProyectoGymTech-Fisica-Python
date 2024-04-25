@@ -1,13 +1,16 @@
 import tkinter as tk
 from tkinter import filedialog
+from tkinter import ttk
 import cv2
 from PIL import Image, ImageTk
 import prueba
 import sys
+import matplotlib.pyplot as plt
+import numpy as np
 
 class VideoPlayerApp:
     frameNumber = 0
-    frames = 0
+    frames = 30
 
     def __init__(self, master):
         self.master = master
@@ -82,10 +85,37 @@ class VideoPlayerApp:
         # Ejecuta graficos.py para generar los graficos correspondientes
         exec(open('graficos.py').read(),globals())
         
-        # Cargar y mostrar el gráfico en el frame
-        self.load_image("resultados/graficos/subgraficos.png" )
-        self.show_image()
+        #Abre el drop-down menu para seleccionar el grafico deseado
+        self.seleccion_imagen()
+
+    
+
+    def seleccion_imagen (self) :
+        self.dropdown_frame = tk.Frame(self.video_frame)
+        self.dropdown_frame.grid(column=2, row=0, padx=10)
+
+        self.options = ["posicion munieca x", "posicion munieca y", "velocidad munieca y", "velocidad munieca x"]
+        self.selected_option = tk.StringVar(value=self.options[0])
+
+        self.dropdown = ttk.Combobox(self.dropdown_frame, textvariable=self.selected_option, values=self.options)
+        self.dropdown.pack()
         
+        self.dropdown.bind("<<ComboboxSelected>>", self.on_dropdown_changed)
+        
+    #Encuentra la ruta de la imagen seleccionada 
+    def on_dropdown_changed(self, event):
+        selected = self.selected_option.get()
+        if selected == "posicion munieca x":
+            self.load_image("resultados\\graficos\\posicion_x_muneca.png")  # Reemplaza "ruta/imagen1.png" con la ruta de tu imagen
+        elif selected == "posicion munieca y":
+            self.load_image("resultados\\graficos\\posicion_y_muneca.png")  # Reemplaza "ruta/imagen2.png" con la ruta de tu imagen
+        elif selected == "velocidad munieca y":
+            self.load_image("resultados\\graficos\\velocidad_y_muneca.png")  # Reemplaza "ruta/imagen3.png" con la ruta de tu imagen
+        elif selected == "velocidad munieca x":
+            self.load_image("resultados\\graficos\\velocidad_x_muneca.png")  # Reemplaza "ruta/imagen4.png" con la ruta de tu imagen
+        self.show_image()
+
+
     def on_slider_changed(self, val):
         if not self.is_playing:
             self.frameNumber = int(val)
@@ -140,7 +170,7 @@ class VideoPlayerApp:
                 self.btn_restart.config(state=tk.NORMAL) 
             self.update_slider_position(self.frameNumber)
             self.frameNumber += 1
-
+            self.draw_indicator_line()
             # Verificar si se alcanza el último fotograma
             if self.frameNumber == self.frames:
                 self.btn_play.config(state=tk.DISABLED)  # Deshabilitar el botón de play al llegar al final
@@ -156,10 +186,31 @@ class VideoPlayerApp:
     def show_image(self):
         # Mostrar la imagen en el frame
         image_width, image_height = self.image.size
-        resized_image = self.image.resize((int(image_width / 2), int(image_height / 2.5)))  # Ajustar el tamaño de la imagen
+        resized_image = self.image.resize((int(image_width), int(image_height)))  # Ajustar el tamaño de la imagen
         self.img_tk = ImageTk.PhotoImage(resized_image)
         self.image_label.config(image=self.img_tk)
         self.image_label.image = self.img_tk
+
+    def draw_indicator_line(self):
+        # Crear una imagen a partir del archivo existente
+        image_array = np.array(self.image)
+        
+        # Dimensiones de la imagen
+        height, width, _ = image_array.shape
+        
+        # Calcular la posición x de la línea indicadora basada en el fotograma actual
+        indicator_x = int(self.frameNumber / self.frames * width)
+        
+        # Dibujar la línea indicadora (roja en este ejemplo)
+        cv2.line(image_array, (indicator_x, 0), (indicator_x, height), (255, 0, 0), thickness=2)
+        
+        # Convertir la imagen modificada a formato ImageTk
+        image_with_line = Image.fromarray(image_array)
+        img_tk_with_line = ImageTk.PhotoImage(image_with_line)
+        
+        # Mostrar la imagen actualizada en el label
+        self.image_label.config(image=img_tk_with_line)
+        self.image_label.image = img_tk_with_line
 
 def on_closing():
     sys.exit(0)
