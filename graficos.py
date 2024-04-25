@@ -5,7 +5,7 @@ def generarGrafico(tiempo, posicion, string):
     ruta = 'resultados/graficos/'+string+'.png'
     #Crea una nueva figura
     plt.figure()
-    plt.plot(tiempo, posicion, marker='o', linestyle='-')
+    plt.plot(tiempo, posicion,linestyle='-')
     plt.title(string)
     plt.xlabel('Tiempo')
     plt.ylabel('Metros')
