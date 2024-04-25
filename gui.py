@@ -79,14 +79,26 @@ class VideoPlayerApp:
 
         # Consigue los frames totales para generar la slider con ese numero maximo
         self.frames = int(self.video_cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        self.slider = tk.Scale(from_=0, to=self.frames - 1, orient=tk.HORIZONTAL, command=self.on_slider_changed)
+
+       # Frame principal para el deslizador
+        self.slider_frame = tk.Frame(self.master)
+        self.slider_frame.pack(pady=10)
+
+        # Crear el deslizador con una longitud fija
+        slider_length = 466
+        self.slider = tk.Scale(self.slider_frame, from_=0, to=self.frames - 1, orient=tk.HORIZONTAL, command=self.on_slider_changed, length=slider_length)
         self.slider.pack(fill=tk.X)
-        
+
+        # Centrar el frame del deslizador debajo del frame de la imagen
+        self.slider_frame.place(in_=self.image_frame, relx=0.5, rely=1.0, anchor=tk.CENTER)
+       
         # Ejecuta graficos.py para generar los graficos correspondientes
         exec(open('graficos.py').read(),globals())
         
         #Abre el drop-down menu para seleccionar el grafico deseado
         self.seleccion_imagen()
+
+        self.show_frame()
 
     
 
@@ -105,15 +117,16 @@ class VideoPlayerApp:
     #Encuentra la ruta de la imagen seleccionada 
     def on_dropdown_changed(self, event):
         selected = self.selected_option.get()
-        if selected == "posicion munieca x":
-            self.load_image("resultados\\graficos\\posicion_x_muneca.png")  # Reemplaza "ruta/imagen1.png" con la ruta de tu imagen
-        elif selected == "posicion munieca y":
-            self.load_image("resultados\\graficos\\posicion_y_muneca.png")  # Reemplaza "ruta/imagen2.png" con la ruta de tu imagen
-        elif selected == "velocidad munieca y":
-            self.load_image("resultados\\graficos\\velocidad_y_muneca.png")  # Reemplaza "ruta/imagen3.png" con la ruta de tu imagen
-        elif selected == "velocidad munieca x":
-            self.load_image("resultados\\graficos\\velocidad_x_muneca.png")  # Reemplaza "ruta/imagen4.png" con la ruta de tu imagen
+        image_paths = {
+            "posicion munieca x": "resultados\\graficos\\posicion_x_muneca.png",
+            "posicion munieca y": "resultados\\graficos\\posicion_y_muneca.png",
+            "velocidad munieca y": "resultados\\graficos\\velocidad_y_muneca.png",
+            "velocidad munieca x": "resultados\\graficos\\velocidad_x_muneca.png"
+        }
+        self.load_image(image_paths.get(selected, "loadImage.png"))
         self.show_image()
+        self.show_frame()
+
 
 
     def on_slider_changed(self, val):
@@ -199,10 +212,15 @@ class VideoPlayerApp:
         height, width, _ = image_array.shape
         
         # Calcular la posición x de la línea indicadora basada en el fotograma actual
-        indicator_x = int(self.frameNumber / self.frames * width)
+        indicator_x = int((self.frameNumber / self.frames * (width * 0.74))) 
+        indicator_x += int(width * 0.14)
         
-        # Dibujar la línea indicadora (roja en este ejemplo)
-        cv2.line(image_array, (indicator_x, 0), (indicator_x, height), (255, 0, 0), thickness=2)
+        # Calcular el punto de inicio y final de la línea (y)
+        start_point = (indicator_x, 0)
+        end_point = (indicator_x, height)
+        
+        # Dibujar la línea indicadora (por ejemplo, en color rojo)
+        cv2.line(image_array, start_point, end_point, (255, 0, 0), thickness=2)
         
         # Convertir la imagen modificada a formato ImageTk
         image_with_line = Image.fromarray(image_array)
