@@ -12,6 +12,18 @@ def generarSubgraficos(tiempo, datos, titulos, unidades):
     plt.tight_layout()
     plt.savefig('resultados/graficos/subgraficos.png')
     print("Grafico de subgraficos guardado en resultados/graficos/subgraficos.png")
+    
+    def generarGrafico(tiempo, posicion, string):
+    ruta = 'resultados/graficos/'+string+'.png'
+    #Crea una nueva figura
+    plt.figure()
+    plt.plot(tiempo, posicion,linestyle='-')
+    plt.title(string)
+    plt.xlabel('Tiempo')
+    plt.ylabel('Metros')
+    plt.grid(True)
+    plt.savefig(ruta)
+    #plt.show()
 
 def createNewDataframe():
     dataframe = pd.read_csv('resultados/documents/data.csv', index_col=[0])
