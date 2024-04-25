@@ -95,6 +95,8 @@ class VideoPlayerApp:
 
     def play_video(self):
         if self.video_cap:
+            # Ejecuta graficos.py para generar los graficos correspondientes
+            exec(open('graficos.py').read(),globals())
             self.is_playing = True
             self.btn_play.config(state=tk.DISABLED)
             self.btn_stop.config(state=tk.NORMAL)
