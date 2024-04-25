@@ -3,6 +3,7 @@ from tkinter import filedialog
 import cv2
 from PIL import Image, ImageTk
 import prueba
+import sys
 
 class VideoPlayerApp:
     frameNumber = 0
@@ -155,8 +156,12 @@ class VideoPlayerApp:
         self.image_label.config(image=self.img_tk)
         self.image_label.image = self.img_tk
 
+def on_closing():
+    sys.exit(0)
+
 def main():
     root = tk.Tk()
+    root.protocol("WM_DELETE_WINDOW", on_closing)
     app = VideoPlayerApp(root)
     root.mainloop()
 
