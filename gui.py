@@ -3,6 +3,7 @@ from tkinter import filedialog
 import cv2
 from PIL import Image, ImageTk
 import prueba
+import sys
 
 class VideoPlayerApp:
     frameNumber = 0
@@ -53,15 +54,6 @@ class VideoPlayerApp:
         # Cargamos la imagen de presentación
         self.load_image("loadImage.png")
         self.show_image()
-        
-        # Manejador de eventos para el cierre de la ventana principal
-        self.master.protocol("WM_DELETE_WINDOW", self.close_window)
-    
-    def close_window(self):
-        if self.video_cap is not None:
-            self.video_cap.release()  # Liberar el recurso del video
-        self.master.quit()  # Detener el bucle principal de la GUI
-        self.master.destroy()  # Cerrar la ventana principal y finalizar el programa
 
     def update_slider_position(self, val):
         # Actualizar la posición del slider
@@ -169,8 +161,12 @@ class VideoPlayerApp:
         self.image_label.config(image=self.img_tk)
         self.image_label.image = self.img_tk
 
+def on_closing():
+    sys.exit(0)
+
 def main():
     root = tk.Tk()
+    root.protocol("WM_DELETE_WINDOW", on_closing)
     app = VideoPlayerApp(root)
     root.mainloop()
 
