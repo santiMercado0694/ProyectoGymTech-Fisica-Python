@@ -1,12 +1,11 @@
 import tkinter as tk
 from PIL import Image, ImageTk
+from gui import VideoPlayerApp 
 
 class MenuApp:
-
     def __init__(self, master):
         self.master = master
         self.master.title("GymTech")
-        
         self.createWidgets()
 
     def createWidgets(self):
@@ -34,6 +33,11 @@ class MenuApp:
         self.image_label = tk.Label(self.image_frame, image=self.image)
         self.image_label.image = self.image 
         self.image_label.pack()
+
+        # Lista de botones
+        self.buttons = []
+        initial_buttons = [("Start", self.startFunction), ("Ajustes", self.ajustesFunction)]
+        self.createButtons(initial_buttons)
 
         self.setResolution()
 
@@ -75,10 +79,28 @@ class MenuApp:
         self.image_label.configure(image=self.image_resized)
         self.image_label.image = self.image_resized  # Actualizar la referencia de la imagen
 
+    def createButtons(self, button_info):
+        # Crear un marco para los botones
+        button_frame = tk.Frame(self.master)
+        button_frame.pack(side="right", fill="both", expand=True)
+
+        for name, command in button_info:
+            button = tk.Button(button_frame, text=name, command=lambda method=command: method())
+            button.pack(side="top", padx=5, pady=5, fill="both", expand=True)
+            self.buttons.append(button)       
+
+    def startFunction(self):
+        self.master.destroy()
+    
+        root = tk.Tk()
+        app = VideoPlayerApp(root)
+
+    def ajustesFunction(self):
+        print("Ajustes button clicked")
 
 def main():
     root = tk.Tk()
-    MenuApp(root)
+    app = MenuApp(root)
     root.mainloop()
 
 if __name__ == "__main__":
