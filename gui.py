@@ -103,6 +103,8 @@ class VideoPlayerApp:
     
 
     def seleccion_imagen (self) :
+        self.load_image("resultados\\graficos\\posicion_x_muneca.png")
+        self.show_image()
         self.dropdown_frame = tk.Frame(self.video_frame)
         self.dropdown_frame.grid(column=2, row=0, padx=10)
 
@@ -220,7 +222,7 @@ class VideoPlayerApp:
         end_point = (indicator_x, height)
         
         # Dibujar la línea indicadora (por ejemplo, en color rojo)
-        cv2.line(image_array, start_point, end_point, (255, 0, 0), thickness=2)
+        cv2.line(image_array, start_point, end_point, (255, 0,0, 255), thickness=2)
         
         # Convertir la imagen modificada a formato ImageTk
         image_with_line = Image.fromarray(image_array)
