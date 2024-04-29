@@ -36,10 +36,13 @@ class MenuApp:
 
         # Lista de botones
         self.buttons = []
-        initial_buttons = [("Start", self.startFunction), ("Ajustes", self.ajustesFunction)]
+        initial_buttons = [("Start", self.startFunction), ("Ajustes", self.ajustesFunction), ("Salir", self.close_menu)]
         self.createButtons(initial_buttons)
 
         self.setResolution()
+
+    def close_menu(self):
+        self.master.destroy()
 
     # Se activa cuando se usa el desplegable de resolución
     def setResolution(self, *args):
@@ -90,9 +93,7 @@ class MenuApp:
             self.buttons.append(button)       
 
     def startFunction(self):
-        self.master.destroy()
-    
-        root = tk.Tk()
+        root = tk.Toplevel(self.master)
         app = VideoPlayerApp(root)
 
     def ajustesFunction(self):
