@@ -30,6 +30,9 @@ class VideoPlayerApp:
         self.btn_open = tk.Button(self.video_frame, text="Seleccionar Video", command=self.open_video)
         self.btn_open.grid(column=0, row=0)
 
+        self.btn_goBack = tk.Button(self.video_frame, text="Volver al Menú", command=self.back_to_menu)
+        self.btn_goBack.grid(column=0, row=1)
+
         # Frame para los botones de control (play, pause, restart)
         self.control_frame = tk.Frame(self.video_frame)
         self.control_frame.grid(column=1, row=0)
@@ -61,6 +64,9 @@ class VideoPlayerApp:
     def update_slider_position(self, val):
         # Actualizar la posición del slider
         self.slider.set(val)
+
+    def back_to_menu(self):
+        self.master.destroy()
 
     def open_video(self):
      self.video_path = filedialog.askopenfilename(filetypes=[("Archivos de Video", "*.mp4;*.avi;*.mkv")])
