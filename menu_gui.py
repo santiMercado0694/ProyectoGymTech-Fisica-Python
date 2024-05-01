@@ -93,9 +93,10 @@ class MenuApp:
             self.buttons.append(button)       
 
     def startFunction(self):
-        root = tk.Toplevel(self.master)
-        app = VideoPlayerApp(root)
-
+        self.master.withdraw()  # Ocultar la ventana del menú inicial
+        player_window = tk.Toplevel(self.master)  # Crear una nueva ventana para la aplicación de reproducción de video
+        self.player_app = VideoPlayerApp(player_window, self.master)  # Pasar la ventana del menú principal como parámetro
+        
     def ajustesFunction(self):
         print("Ajustes button clicked")
 

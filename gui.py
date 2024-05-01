@@ -12,8 +12,9 @@ class VideoPlayerApp:
     frameNumber = 0
     frames = 30
 
-    def __init__(self, master):
+    def __init__(self, master,menu_window):
         self.master = master
+        self.menu_window = menu_window
         self.master.title("Reproductor de Video")
         
         self.video_path = None
@@ -66,7 +67,8 @@ class VideoPlayerApp:
         self.slider.set(val)
 
     def back_to_menu(self):
-        self.master.destroy()
+        self.master.destroy()  # Cerrar la ventana actual (ventana de video)
+        self.menu_window.deiconify()  # Mostrar la ventana del menú principal
 
     def open_video(self):
      self.video_path = filedialog.askopenfilename(filetypes=[("Archivos de Video", "*.mp4;*.avi;*.mkv")])
@@ -133,9 +135,7 @@ class VideoPlayerApp:
         }
         self.load_image(image_paths.get(selected, "loadImage.png"))
         self.show_image()
-        self.show_frame()
-
-
+        self.draw_indicator_line()
 
     def on_slider_changed(self, val):
         if not self.is_playing:
