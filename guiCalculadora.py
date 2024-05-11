@@ -115,7 +115,7 @@ class VideoPlayerApp:
         self.dropdown_frame = tk.Frame(self.video_frame)
         self.dropdown_frame.grid(column=2, row=0, padx=10)
 
-        self.options = ["posicion munieca x", "posicion munieca y", "velocidad munieca y", "velocidad munieca x", "angulo del brazo"]
+        self.options = ["posicion munieca x", "posicion munieca y", "angulo del brazo"]
         self.selected_option = tk.StringVar(value=self.options[0])
 
         self.dropdown = ttk.Combobox(self.dropdown_frame, textvariable=self.selected_option, values=self.options)
@@ -129,8 +129,6 @@ class VideoPlayerApp:
         image_paths = {
             "posicion munieca x": "resultados\\graficos\\posicion_x_muneca.png",
             "posicion munieca y": "resultados\\graficos\\posicion_y_muneca.png",
-            "velocidad munieca y": "resultados\\graficos\\velocidad_y_muneca.png",
-            "velocidad munieca x": "resultados\\graficos\\velocidad_x_muneca.png",
             "angulo del brazo": "resultados\\graficos\\angulo_del_brazo.png"
         }
         self.load_image(image_paths.get(selected, "loadImage.png"))
@@ -274,19 +272,10 @@ class VideoPlayerApp:
         df2['angulo'] = dataframe['Angulo']
         df2['tiempo'] = dataframe['tiempo(seg)']
 
-        df2['dx'] = df2['posicion_x'].diff()
-        df2['dy'] = df2['posicion_y'].diff()
-        df2['dt'] = df2['tiempo'].diff()
-
-        df2.dropna(inplace=True)
-
-        df2['vx'] = df2['dx'] / df2['dt']
-        df2['vy'] = df2['dy'] / df2['dt']
-
         tiempo = df2['tiempo']
-        datos = [df2['posicion_x'], df2['posicion_y'], df2['vx'], df2['vy'], df2['angulo']]
-        titulos = ['Posicion X Muneca', 'Posicion Y Muneca', 'Velocidad X Muneca', 'Velocidad Y Muneca', 'Angulo del brazo']
-        unidades = ['m', 'm', 'm/s', 'm/s', 'deg']
+        datos = [df2['posicion_x'], df2['posicion_y'],df2['angulo']]
+        titulos = ['Posicion X Muneca', 'Posicion Y Muneca','Angulo del brazo']
+        unidades = ['m', 'm', 'deg']
 
         self.generarGraficos(tiempo, datos, titulos, unidades)
 

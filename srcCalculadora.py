@@ -82,6 +82,7 @@ def track_pose(video_path):
                 pose_row_cartesian[landmark.name + '_x(m)'] = rel_x
                 pose_row_cartesian[landmark.name + '_y(m)'] = rel_y
 
+            #Se calcula y agrega al csv el angulo del brazo en ese frame
             pose_row_cartesian["Angulo"] = angulo_entre_vectores((results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].x,results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].y),
                                                                  (results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].x,results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].y),
                                                                  (results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER].x,results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER].y))
@@ -107,6 +108,7 @@ def track_pose(video_path):
     if video_ready_callback:
         video_ready_callback()
 
+#Metodo auxiliar de angulo_entre_vectores que aplica a = arcos ( (V1 * V2) / ( ||V1|| * ||V2|| ) )
 def calcular_angulo(vector1, vector2):
     producto_punto = vector1[0] * vector2[0] + vector1[1] * vector2[1]
     magnitud1 = math.sqrt(vector1[0] ** 2 + vector1[1] ** 2)
@@ -116,6 +118,7 @@ def calcular_angulo(vector1, vector2):
     angulo_deg = math.degrees(angulo_rad)
     return angulo_deg
 
+#Se calcula el angulo en degree, en base a tres puntos (x,y) siendo el 1ro la interseccion
 def angulo_entre_vectores(codo_pos, muneca_pos, hombro_pos):
     vector_codo_muneca = (muneca_pos[0] - codo_pos[0], muneca_pos[1] - codo_pos[1])
     vector_codo_hombro = (hombro_pos[0] - codo_pos[0], hombro_pos[1] - codo_pos[1])
