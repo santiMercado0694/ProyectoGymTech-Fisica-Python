@@ -24,16 +24,19 @@ class VideoPlayerApp:
         
         self.create_widgets()
 
+    # Frame principal para el reproductor de video
+    def create_frame_reproductor_video(self, master):
+        master.video_frame = tk.Frame(master.master)
+        master.video_frame.pack(padx=10, pady=10)
+
+        master.btn_open = tk.Button(master.video_frame, text="Seleccionar Video", command=master.open_video)
+        master.btn_open.grid(column=0, row=0)
+
+        master.btn_goBack = tk.Button(master.video_frame, text="Volver al Menú", command=master.back_to_menu)
+        master.btn_goBack.grid(column=0, row=1)
+
     def create_widgets(self):
-        # Frame principal para el reproductor de video
-        self.video_frame = tk.Frame(self.master)
-        self.video_frame.pack(padx=10, pady=10)
-
-        self.btn_open = tk.Button(self.video_frame, text="Seleccionar Video", command=self.open_video)
-        self.btn_open.grid(column=0, row=0)
-
-        self.btn_goBack = tk.Button(self.video_frame, text="Volver al Menú", command=self.back_to_menu)
-        self.btn_goBack.grid(column=0, row=1)
+        self.create_frame_reproductor_video(self)
 
         # Frame para los botones de control (play, pause, restart)
         self.control_frame = tk.Frame(self.video_frame)
@@ -109,8 +112,7 @@ class VideoPlayerApp:
 
         self.show_frame()
 
-    
-
+    #Selecciona una imagen default para el video
     def seleccion_imagen (self) :
         self.load_image("resultados\\graficos\\posicion_x_muneca.png")
         self.show_image()
@@ -153,6 +155,7 @@ class VideoPlayerApp:
         self.btn_stop.config(state=tk.DISABLED)     # Deshabilitar el botón de pausa al inicio
         self.btn_restart.config(state=tk.NORMAL)  
 
+    # Reproduce el video
     def play_video(self):
         if self.video_cap:
             self.is_playing = True
@@ -161,6 +164,7 @@ class VideoPlayerApp:
             self.btn_restart.config(state=tk.DISABLED)  # Deshabilitar el botón de reinicio mientras se reproduce
             self.show_frame()
 
+    #Pausa el video
     def stop_video(self):
         if self.video_cap:
             self.is_playing = False
@@ -168,6 +172,7 @@ class VideoPlayerApp:
                 self.btn_play.config(state=tk.NORMAL)  # Habilitar el botón de play solo si no se ha llegado al final
             self.btn_stop.config(state=tk.DISABLED)
 
+    #Reinicia el video
     def restart_video(self):
         if self.video_cap:
             self.frameNumber = 0
@@ -176,6 +181,7 @@ class VideoPlayerApp:
             self.btn_play.config(state=tk.NORMAL)
             self.btn_stop.config(state=tk.DISABLED)
 
+    #Muestra el fotograma en el video
     def show_frame(self):
         ret, frame = self.video_cap.read()
         if ret:
@@ -200,13 +206,13 @@ class VideoPlayerApp:
         else:
             self.stop_video()
 
+    # Cargar una imagen desde el archivo
     def load_image(self,ruta):
-        # Cargar una imagen desde el archivo
         self.image_path = ruta 
         self.image = Image.open(self.image_path)
 
+    # Mostrar la imagen en el frame
     def show_image(self):
-        # Mostrar la imagen en el frame
         image_width, image_height = self.image.size
         resized_image = self.image.resize((int(image_width), int(image_height)))  # Ajustar el tamaño de la imagen
         self.img_tk = ImageTk.PhotoImage(resized_image)
