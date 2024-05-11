@@ -30,6 +30,7 @@ def track_pose(video_path):
         columns_cartesian.append(landmark.name + '_x(m)')
         columns_cartesian.append(landmark.name + '_y(m)')
     columns_cartesian.append("Angulo")
+    columns_cartesian.append("VelocidadAngular")
     pose_data_cartesian = pd.DataFrame(columns=columns_cartesian)
 
     pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
@@ -115,10 +116,9 @@ def calcular_angulo(vector1, vector2):
     magnitud2 = math.sqrt(vector2[0] ** 2 + vector2[1] ** 2)
     cos_theta = producto_punto / (magnitud1 * magnitud2)
     angulo_rad = math.acos(cos_theta)
-    angulo_deg = math.degrees(angulo_rad)
-    return angulo_deg
+    return angulo_rad
 
-#Se calcula el angulo en degree, en base a tres puntos (x,y) siendo el 1ro la interseccion
+#Se calcula el angulo en rads, en base a tres puntos (x,y) siendo el 1ro la interseccion
 def angulo_entre_vectores(codo_pos, muneca_pos, hombro_pos):
     vector_codo_muneca = (muneca_pos[0] - codo_pos[0], muneca_pos[1] - codo_pos[1])
     vector_codo_hombro = (hombro_pos[0] - codo_pos[0], hombro_pos[1] - codo_pos[1])
