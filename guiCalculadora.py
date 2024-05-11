@@ -25,46 +25,54 @@ class VideoPlayerApp:
         self.create_widgets()
 
     # Frame principal para el reproductor de video
-    def create_frame_reproductor_video(self, master):
-        master.video_frame = tk.Frame(master.master)
-        master.video_frame.pack(padx=10, pady=10)
+    def __create_frame_reproductor_video(self, gui):
+        gui.video_frame = tk.Frame(gui.master)
+        gui.video_frame.pack(padx=10, pady=10)
 
-        master.btn_open = tk.Button(master.video_frame, text="Seleccionar Video", command=master.open_video)
-        master.btn_open.grid(column=0, row=0)
+        gui.btn_open = tk.Button(gui.video_frame, text="Seleccionar Video", command=gui.open_video)
+        gui.btn_open.grid(column=0, row=0)
 
-        master.btn_goBack = tk.Button(master.video_frame, text="Volver al Menú", command=master.back_to_menu)
-        master.btn_goBack.grid(column=0, row=1)
+        gui.btn_goBack = tk.Button(gui.video_frame, text="Volver al Menú", command=gui.back_to_menu)
+        gui.btn_goBack.grid(column=0, row=1)
+
+    #Crea el frame de los botones de control
+    def __create_frame_botones_control(self,gui):
+        gui.control_frame = tk.Frame(gui.video_frame)
+        gui.control_frame.grid(column=1, row=0)
+
+        gui.btn_play = tk.Button(gui.control_frame, text="\u23F5", command=gui.play_video, state=tk.DISABLED)
+        gui.btn_play.pack(side=tk.LEFT)
+
+        gui.btn_stop = tk.Button(gui.control_frame, text="\u23F8", command=gui.stop_video, state=tk.DISABLED)
+        gui.btn_stop.pack(side=tk.LEFT)
+
+        gui.btn_restart = tk.Button(gui.control_frame, text="\u23F9", command=gui.restart_video, state=tk.DISABLED)
+        gui.btn_restart.pack(side=tk.LEFT)
+
+        gui.video_label = tk.Label(gui.video_frame)
+        gui.video_label.grid(column=1, row=1)
+
+    # Frame para la imagen adicional a la derecha
+    def __create_frame_imagen_derecha(self, gui):
+        gui.image_frame = tk.Frame(gui.master)
+        gui.image_frame.pack(padx=10, pady=10)
+
+    # Crear un label para la imagen
+    def __create_frame_image_label(self,gui):
+        gui.image_label = tk.Label(gui.image_frame)
+        gui.image_label.pack() 
+
+    # Cargamos la imagen de presentación
+    def __create_frame_imagen_presentacion(self,gui):
+        gui.load_image("loadImage.png")
+        gui.show_image()
 
     def create_widgets(self):
-        self.create_frame_reproductor_video(self)
-
-        # Frame para los botones de control (play, pause, restart)
-        self.control_frame = tk.Frame(self.video_frame)
-        self.control_frame.grid(column=1, row=0)
-
-        self.btn_play = tk.Button(self.control_frame, text="\u23F5", command=self.play_video, state=tk.DISABLED)
-        self.btn_play.pack(side=tk.LEFT)
-
-        self.btn_stop = tk.Button(self.control_frame, text="\u23F8", command=self.stop_video, state=tk.DISABLED)
-        self.btn_stop.pack(side=tk.LEFT)
-
-        self.btn_restart = tk.Button(self.control_frame, text="\u23F9", command=self.restart_video, state=tk.DISABLED)
-        self.btn_restart.pack(side=tk.LEFT)
-
-        self.video_label = tk.Label(self.video_frame)
-        self.video_label.grid(column=1, row=1)
-
-        # Frame para la imagen adicional a la derecha
-        self.image_frame = tk.Frame(self.master)
-        self.image_frame.pack(padx=10, pady=10)
-
-        # Crear un label para la imagen
-        self.image_label = tk.Label(self.image_frame)
-        self.image_label.pack() 
-        
-        # Cargamos la imagen de presentación
-        self.load_image("loadImage.png")
-        self.show_image()
+        self.__create_frame_reproductor_video(self)
+        self.__create_frame_botones_control(self)
+        self.__create_frame_imagen_derecha(self)
+        self.__create_frame_image_label(self)
+        self.__create_frame_imagen_presentacion(self)
 
     def update_slider_position(self, val):
         # Actualizar la posición del slider
