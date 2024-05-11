@@ -3,7 +3,7 @@ from tkinter import filedialog
 from tkinter import ttk
 import cv2
 from PIL import Image, ImageTk
-import prueba
+import srcCalculadora
 import sys
 import matplotlib.pyplot as plt
 import numpy as np
@@ -74,9 +74,9 @@ class VideoPlayerApp:
     def open_video(self):
      self.video_path = filedialog.askopenfilename(filetypes=[("Archivos de Video", "*.mp4;*.avi;*.mkv")])
      if self.video_path:
-        # Llama a la funcion track_pose de prueba.py
-        prueba.video_ready_callback = self.video_ready_callback
-        prueba.track_pose(self.video_path)
+        # Llama a la funcion track_pose de srcCalculadora.py
+        srcCalculadora.video_ready_callback = self.video_ready_callback
+        srcCalculadora.track_pose(self.video_path)
         
         # Verificar si ya existe una barra de reproducción y destruirla si es el caso
         if hasattr(self, 'slider') and self.slider is not None:

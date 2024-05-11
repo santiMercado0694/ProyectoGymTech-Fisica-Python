@@ -1,6 +1,6 @@
 import tkinter as tk
 from PIL import Image, ImageTk
-from gui import VideoPlayerApp 
+from guiCalculadora import VideoPlayerApp 
 
 class MenuApp:
     def __init__(self, master):
