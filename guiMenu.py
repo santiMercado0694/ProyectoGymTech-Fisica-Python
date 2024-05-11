@@ -47,21 +47,18 @@ class MenuApp:
     # Se activa cuando se usa el desplegable de resolución
     def setResolution(self, *args):
         selected_resolution = self.selected_resolution.get()
-        new_resolution = "0x0"
+        new_resolution = "640x360"
 
         if selected_resolution == "1080p (HD)":
             new_resolution = "1920x1080"
-            self.master.geometry(new_resolution)
         elif selected_resolution == "720p (HD)":
             new_resolution = "1280x720"
-            self.master.geometry(new_resolution)
         elif selected_resolution == "480p (SD)":
             new_resolution = "854x480"
-            self.master.geometry(new_resolution)
         elif selected_resolution == "360p (SD)":
             new_resolution = "640x360"
-            self.master.geometry(new_resolution)
 
+        self.master.geometry(new_resolution)
         self.resizeRoot(new_resolution)
 
     def resizeRoot(self, resolution):
