@@ -1,5 +1,3 @@
-import glob
-import os
 import cv2
 import pandas as pd
 import numpy as np
@@ -21,8 +19,8 @@ def track_pose(video_path):
 
     # Definir los landmarks de interés
     landmarks_of_interest = [mp_pose.PoseLandmark.LEFT_SHOULDER,
-                            mp_pose.PoseLandmark.LEFT_ELBOW,
-                            mp_pose.PoseLandmark.LEFT_WRIST]
+                             mp_pose.PoseLandmark.LEFT_ELBOW,
+                             mp_pose.PoseLandmark.LEFT_WRIST]
 
     # Crear el DataFrame para almacenar los datos de la pose (coordenadas cartesianas)
     columns_cartesian = ['frame_number', 'tiempo(seg)']
@@ -40,9 +38,11 @@ def track_pose(video_path):
 
     pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
     video_writer = cv2.VideoWriter(OUTPUT_VIDEO_PATH, cv2.VideoWriter_fourcc(*'mp4v'), FPS,
-                                    (int(cap.get(3)), int(cap.get(4))))
+                                   (int(cap.get(3)), int(cap.get(4))))
 
     FRAME_NUMBER = 0
+    repeticiones= 0
+    previous_theta = None  
 
     while cap.isOpened():
         ret, frame = cap.read()
@@ -59,21 +59,22 @@ def track_pose(video_path):
 
         # Dibujar los landmarks de la pose en la imagen
         mp_drawing.draw_landmarks(image, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
-                                mp_drawing.DrawingSpec(color=(245, 117, 66), thickness=2, circle_radius=2),
-                                mp_drawing.DrawingSpec(color=(245, 66, 230), thickness=2, circle_radius=2)
-                                )
-        # Dibujar el número de frame y segundo (Para relacionar con precisión los datos obtenidos con el momento exacto del video)
+                                  mp_drawing.DrawingSpec(color=(245, 117, 66), thickness=2, circle_radius=2),
+                                  mp_drawing.DrawingSpec(color=(245, 66, 230), thickness=2, circle_radius=2)
+                                  )
+        # Dibujar el número de frame, segundo y repeticiones
         tiempo_segundos = FRAME_NUMBER / FPS
         cv2.putText(image, f'Frame: {FRAME_NUMBER}', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1,
                     (255, 255, 255), 2, cv2.LINE_AA)
         cv2.putText(image, f'Segundo: {tiempo_segundos:.2f}', (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 1,
                     (255, 255, 255), 2, cv2.LINE_AA)
-
+        cv2.putText(image, f'Repeticiones: {repeticiones}', (50, int(cap.get(4)) - 50), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                    (255, 255, 255), 2, cv2.LINE_AA)
         # Guardar el cuadro procesado en el video de salida
         video_writer.write(cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
 
         # Recolectar los datos de la pose (coordenadas cartesianas) en el DataFrame
-        pose_row_cartesian = {'frame_number': FRAME_NUMBER, 'tiempo(seg)': tiempo_segundos}
+        pose_row_cartesian = {'frame_number': FRAME_NUMBER, 'tiempo(seg)': tiempo_segundos, 'repeticion': repeticiones}
         if results.pose_landmarks:
             # Obtener las coordenadas del codo
             elbow_x = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].x
@@ -94,7 +95,7 @@ def track_pose(video_path):
         pose_data_cartesian = pd.concat([pose_data_cartesian, pd.DataFrame([pose_row_cartesian])], ignore_index=True)
 
         # Calcular las coordenadas polares y almacenarlas en el DataFrame correspondiente
-        pose_row_polar = {'frame_number': FRAME_NUMBER, 'tiempo(seg)': tiempo_segundos}
+        pose_row_polar = {'frame_number': FRAME_NUMBER, 'tiempo(seg)': tiempo_segundos, 'repeticion': repeticiones}
         if results.pose_landmarks:
             for landmark in landmarks_of_interest:
                 rel_x = pose_row_cartesian[landmark.name + '_x(m)']
@@ -108,6 +109,15 @@ def track_pose(video_path):
             for landmark in landmarks_of_interest:
                 pose_row_polar[landmark.name + '_r(m)'] = None
                 pose_row_polar[landmark.name + '_theta(rad)'] = None
+
+        if previous_theta is not None:
+            current_theta = pose_row_polar[mp_pose.PoseLandmark.LEFT_WRIST.name + '_theta(rad)']
+            if current_theta is not None and previous_theta is not None:
+                if previous_theta < 0 and current_theta > 0:
+                    repeticiones += 1
+                previous_theta = current_theta
+        else:
+            previous_theta = pose_row_polar[mp_pose.PoseLandmark.LEFT_WRIST.name + '_theta(rad)']
 
         pose_data_polar = pd.concat([pose_data_polar, pd.DataFrame([pose_row_polar])], ignore_index=True)
 
@@ -126,4 +136,3 @@ def track_pose(video_path):
     print("Datos de la pose (polares) guardados en:", OUTPUT_POLAR_CSV_PATH)
     if video_ready_callback:
         video_ready_callback()
-
