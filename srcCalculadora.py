@@ -8,12 +8,15 @@ mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
 video_ready_callback = None
 
-def track_pose(video_path):
+def track_pose(video_path,masaPesa):
 
     VIDEO_PATH = video_path
     OUTPUT_VIDEO_PATH = 'resultados/video/tracked_video.mp4'
     OUTPUT_CSV_PATH = 'resultados/documents/data.csv'
     FPS = 30
+    LARGO_ANTEBRAZO= 0.30
+    MASA_PESA= masaPesa
+    GRAVEDAD= 9.81
 
     cap = cv2.VideoCapture(VIDEO_PATH)
 
@@ -29,6 +32,7 @@ def track_pose(video_path):
         columns_cartesian.append(landmark.name + '_y(m)')
     columns_cartesian.append("Angulo")
     columns_cartesian.append("VelocidadAngular")
+    columns_cartesian.append("Torque")
     pose_data_cartesian = pd.DataFrame(columns=columns_cartesian)
 
     pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
@@ -92,12 +96,20 @@ def track_pose(video_path):
             pose_row_cartesian["Angulo"] = angulo_entre_vectores((results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].x,results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].y),
                                                                  (results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].x,results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].y),
                                                                  (results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER].x,results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER].y))
+
+            #Se calcula el torque y se lo agrega al csv
+            torque = LARGO_ANTEBRAZO * MASA_PESA * GRAVEDAD * math.sin(angulo_entre_vectores((results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].x,results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].y),
+                                                                                             (results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].x,results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].y),
+                                                                                             (results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].x,1)))
+            pose_row_cartesian["Torque"] = torque
         else:
             for landmark in landmarks_of_interest:
                 pose_row_cartesian[landmark.name + '_x(m)'] = None
                 pose_row_cartesian[landmark.name + '_y(m)'] = None
-            pose_row_cartesian["Angulo"]
+            pose_row_cartesian["Angulo"]= None
+            pose_row_cartesian["Torque"] = None
         
+        #Contador de repeticiones
         if previous_Y is not None:
             current_Y = pose_row_cartesian[mp_pose.PoseLandmark.LEFT_WRIST.name + '_y(m)']
             if current_Y is not None and previous_Y is not None:
@@ -106,7 +118,7 @@ def track_pose(video_path):
                 previous_Y = current_Y
         else:
             previous_Y = pose_row_cartesian[mp_pose.PoseLandmark.LEFT_WRIST.name + '_y(m)']
-
+        
         pose_data_cartesian = pd.concat([pose_data_cartesian, pd.DataFrame([pose_row_cartesian])], ignore_index=True)
 
         FRAME_NUMBER += 1

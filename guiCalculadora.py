@@ -34,6 +34,12 @@ class VideoPlayerApp:
 
         gui.btn_goBack = tk.Button(gui.video_frame, text="Volver al Menú", command=gui.back_to_menu)
         gui.btn_goBack.grid(column=0, row=1)
+        
+        # Agrega un campo de entrada para la masa de la pesa en la interfaz de usuario
+        gui.masa_entry_label = tk.Label(gui.video_frame, text="Masa de la pesa:")
+        gui.masa_entry_label.grid(column=0, row=2)
+        gui.masa_entry = tk.Entry(gui.video_frame)
+        gui.masa_entry.grid(column=1, row=2)
 
     #Crea el frame de los botones de control
     def __create_frame_botones_control(self,gui):
@@ -83,11 +89,16 @@ class VideoPlayerApp:
         self.menu_window.deiconify()  # Mostrar la ventana del menú principal
 
     def open_video(self):
+     try:
+            masa_pesa = float(self.masa_entry.get())
+     except ValueError:
+            tk.messagebox.showerror("Error", "¡Por favor, ingrese un valor numérico para la masa de la pesa!")
+            return
      self.video_path = filedialog.askopenfilename(filetypes=[("Archivos de Video", "*.mp4;*.avi;*.mkv")])
      if self.video_path:
         # Llama a la funcion track_pose de srcCalculadora.py
         srcCalculadora.video_ready_callback = self.video_ready_callback
-        srcCalculadora.track_pose(self.video_path)
+        srcCalculadora.track_pose(self.video_path,masa_pesa)
         
         # Verificar si ya existe una barra de reproducción y destruirla si es el caso
         if hasattr(self, 'slider') and self.slider is not None:
