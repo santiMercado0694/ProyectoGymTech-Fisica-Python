@@ -64,12 +64,17 @@ def track_pose(video_path):
                                   )
         # Dibujar el número de frame, segundo y repeticiones
         tiempo_segundos = FRAME_NUMBER / FPS
-        cv2.putText(image, f'Frame: {FRAME_NUMBER}', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1,
-                    (255, 255, 255), 2, cv2.LINE_AA)
-        cv2.putText(image, f'Segundo: {tiempo_segundos:.2f}', (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 1,
-                    (255, 255, 255), 2, cv2.LINE_AA)
-        cv2.putText(image, f'Repeticiones: {repeticiones}', (50, int(cap.get(4)) - 50), cv2.FONT_HERSHEY_SIMPLEX, 1,
-                    (255, 255, 255), 2, cv2.LINE_AA)
+        
+        # Contorno de los datos en video
+        cv2.putText(image, f'Frame: {FRAME_NUMBER}', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 0), 12, cv2.LINE_AA)
+        cv2.putText(image, f'Segundo: {tiempo_segundos:.2f}', (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 0), 12, cv2.LINE_AA)
+        cv2.putText(image, f'Repeticiones: {repeticiones}', (50, int(cap.get(4)) - 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 0), 12, cv2.LINE_AA)
+        
+        # Datos en video
+        cv2.putText(image, f'Frame: {FRAME_NUMBER}', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3, cv2.LINE_AA)
+        cv2.putText(image, f'Segundo: {tiempo_segundos:.2f}', (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3, cv2.LINE_AA)
+        cv2.putText(image, f'Repeticiones: {repeticiones}', (50, int(cap.get(4)) - 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3, cv2.LINE_AA)
+
         # Guardar el cuadro procesado en el video de salida
         video_writer.write(cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
 
