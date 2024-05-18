@@ -23,7 +23,7 @@ def track_pose(video_path):
                              mp_pose.PoseLandmark.LEFT_WRIST]
 
     # Crear el DataFrame para almacenar los datos de la pose (coordenadas cartesianas)
-    columns_cartesian = ['frame_number', 'tiempo(seg)']
+    columns_cartesian = ['frame_number', 'tiempo(seg)','repeticion']
     for landmark in landmarks_of_interest:
         columns_cartesian.append(landmark.name + '_x(m)')
         columns_cartesian.append(landmark.name + '_y(m)')
@@ -37,7 +37,7 @@ def track_pose(video_path):
 
     FRAME_NUMBER = 0
     repeticiones= 0
-    previous_theta = None  
+    previous_Y = None  
 
     while cap.isOpened():
         ret, frame = cap.read()
@@ -57,18 +57,18 @@ def track_pose(video_path):
                                   mp_drawing.DrawingSpec(color=(245, 117, 66), thickness=2, circle_radius=2),
                                   mp_drawing.DrawingSpec(color=(245, 66, 230), thickness=2, circle_radius=2)
                                   )
-        # Dibujar el número de frame, segundo y repeticiones
+        
         tiempo_segundos = FRAME_NUMBER / FPS
         
         # Contorno de los datos en video
-        cv2.putText(image, f'Frame: {FRAME_NUMBER}', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 0), 12, cv2.LINE_AA)
-        cv2.putText(image, f'Segundo: {tiempo_segundos:.2f}', (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 0), 12, cv2.LINE_AA)
-        cv2.putText(image, f'Repeticiones: {repeticiones}', (50, int(cap.get(4)) - 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 0), 12, cv2.LINE_AA)
+        cv2.putText(image, f'Frame: {FRAME_NUMBER}', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 12, cv2.LINE_AA)
+        cv2.putText(image, f'Segundo: {tiempo_segundos:.2f}', (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 12, cv2.LINE_AA)
+        cv2.putText(image, f'Repeticiones: {repeticiones}', (50, int(cap.get(4)) - 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 12, cv2.LINE_AA)
         
         # Datos en video
-        cv2.putText(image, f'Frame: {FRAME_NUMBER}', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3, cv2.LINE_AA)
-        cv2.putText(image, f'Segundo: {tiempo_segundos:.2f}', (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3, cv2.LINE_AA)
-        cv2.putText(image, f'Repeticiones: {repeticiones}', (50, int(cap.get(4)) - 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (255, 255, 255), 3, cv2.LINE_AA)
+        cv2.putText(image, f'Frame: {FRAME_NUMBER}', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 3, cv2.LINE_AA)
+        cv2.putText(image, f'Segundo: {tiempo_segundos:.2f}', (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 3, cv2.LINE_AA)
+        cv2.putText(image, f'Repeticiones: {repeticiones}', (50, int(cap.get(4)) - 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 3, cv2.LINE_AA)
 
         # Guardar el cuadro procesado en el video de salida
         video_writer.write(cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
@@ -97,6 +97,15 @@ def track_pose(video_path):
                 pose_row_cartesian[landmark.name + '_x(m)'] = None
                 pose_row_cartesian[landmark.name + '_y(m)'] = None
             pose_row_cartesian["Angulo"]
+        
+        if previous_Y is not None:
+            current_Y = pose_row_cartesian[mp_pose.PoseLandmark.LEFT_WRIST.name + '_y(m)']
+            if current_Y is not None and previous_Y is not None:
+                if previous_Y < 0 and current_Y > 0:
+                    repeticiones += 1
+                previous_Y = current_Y
+        else:
+            previous_Y = pose_row_cartesian[mp_pose.PoseLandmark.LEFT_WRIST.name + '_y(m)']
 
         pose_data_cartesian = pd.concat([pose_data_cartesian, pd.DataFrame([pose_row_cartesian])], ignore_index=True)
 
