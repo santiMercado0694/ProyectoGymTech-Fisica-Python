@@ -127,7 +127,7 @@ class VideoPlayerApp:
         self.dropdown_frame = tk.Frame(self.video_frame)
         self.dropdown_frame.grid(column=2, row=0, padx=10)
 
-        self.options = ["posicion munieca x", "posicion munieca y", "velocidad munieca y", "velocidad munieca x"]
+        self.options = ["Posicion Muñeca x", "Posicion Muñeca y", "Angulo del Brazo", "Velocidad Angular", "Aceleracion Angular"]
         self.selected_option = tk.StringVar(value=self.options[0])
 
         self.dropdown = ttk.Combobox(self.dropdown_frame, textvariable=self.selected_option, values=self.options)
@@ -139,10 +139,11 @@ class VideoPlayerApp:
     def on_dropdown_changed(self, event):
         selected = self.selected_option.get()
         image_paths = {
-            "posicion munieca x": "resultados\\graficos\\posicion_x_muneca.png",
-            "posicion munieca y": "resultados\\graficos\\posicion_y_muneca.png",
-            "velocidad munieca y": "resultados\\graficos\\velocidad_y_muneca.png",
-            "velocidad munieca x": "resultados\\graficos\\velocidad_x_muneca.png"
+            "Posicion Muñeca x": "resultados\\graficos\\posicion_x_muneca.png",
+            "Posicion Muñeca y": "resultados\\graficos\\posicion_y_muneca.png",
+            "Angulo del Brazo": "resultados\\graficos\\angulo_del_brazo.png",
+            "Velocidad Angular": "resultados\\graficos\\velocidad_angular.png",
+            "Aceleracion Angular": "resultados\\graficos\\aceleracion_angular.png",
         }
         self.load_image(image_paths.get(selected, "loadImage.png"))
         self.show_image()
@@ -286,21 +287,22 @@ class VideoPlayerApp:
         df2 = pd.DataFrame()
         df2['posicion_x'] = dataframe['LEFT_WRIST_x(m)']
         df2['posicion_y'] = dataframe['LEFT_WRIST_y(m)']
+        df2['angulo'] = dataframe['Angulo']
         df2['tiempo'] = dataframe['tiempo(seg)']
-
-        df2['dx'] = df2['posicion_x'].diff()
-        df2['dy'] = df2['posicion_y'].diff()
-        df2['dt'] = df2['tiempo'].diff()
 
         df2.dropna(inplace=True)
 
-        df2['vx'] = df2['dx'] / df2['dt']
-        df2['vy'] = df2['dy'] / df2['dt']
+        df2['dif_angular'] = df2['angulo'].diff()
+        df2['dif_temporal'] = df2['tiempo'].diff()
+        df2['vel_angular'] = abs(df2['dif_angular'] / df2['dif_temporal'])
+
+        df2['dif_vel_angular'] = df2['vel_angular'].diff()
+        df2['aceleracion_angular'] = abs(df2['dif_vel_angular'] / df2['dif_temporal'])
 
         tiempo = df2['tiempo']
-        datos = [df2['posicion_x'], df2['posicion_y'], df2['vx'], df2['vy']]
-        titulos = ['Posicion X Muneca', 'Posicion Y Muneca', 'Velocidad X Muneca', 'Velocidad Y Muneca']
-        unidades = ['m', 'm', 'm/s', 'm/s']
+        datos = [df2['posicion_x'], df2['posicion_y'],df2['angulo'],df2['vel_angular'],df2['aceleracion_angular']]
+        titulos = ['Posicion X Muneca', 'Posicion Y Muneca','Angulo del brazo','Velocidad Angular','Aceleracion Angular']
+        unidades = ['m', 'm', 'rad', 'rad/seg', 'rad/seg^2']
 
         self.generarGraficos(tiempo, datos, titulos, unidades)
 
