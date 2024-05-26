@@ -1,11 +1,13 @@
 import tkinter as tk
 from PIL import Image, ImageTk
 from guiCalculadora import VideoPlayerApp 
+import customtkinter as ctk
+from PIL import Image, ImageTk
 
 class MenuApp:
     def __init__(self, master):
         self.master = master
-        self.master.title("GymTech")
+        self.master.geometry("640x360")
         self.createWidgets()
 
     def createWidgets(self):
@@ -13,31 +15,31 @@ class MenuApp:
         self.master.geometry("640x360")
 
         # Crear el menú desplegable
-        resolutions = ["1080p (HD)", "720p (HD)", "480p (SD)", "360p (SD)"]
-        self.selected_resolution = tk.StringVar(self.master)
-        self.selected_resolution.set(resolutions[3]) 
-        self.resolution_menu = tk.OptionMenu(self.master, self.selected_resolution, *resolutions, command=self.setResolution)
+        resoluciones = ["1080p (HD)", "720p (HD)", "480p (SD)", "360p (SD)"]
+        self.selected_resolution = ctk.StringVar(self.master)
+        self.selected_resolution.set(resoluciones[3]) 
+        self.resolution_menu = ctk.CTkOptionMenu(self.master, variable=self.selected_resolution, values=resoluciones, command=self.setResolution)
         self.resolution_menu.pack(anchor="ne", padx=10, pady=10)  
 
         # Cargar la imagen
         self.original_image = Image.open("loadImage.png")
 
-        # Crear un marco para la imagen con margen
-        self.image_frame = tk.Frame(self.master, padx=5, pady=5)
-        self.image_frame.pack(side="left")
+        # Crear un marco para la imagen
+        self.image_frame = ctk.CTkFrame(self.master)
+        self.image_frame.pack(side="left", padx=5, pady=5)
 
         # Convertir la imagen a un objeto tkinter PhotoImage
         self.image = ImageTk.PhotoImage(self.original_image)
 
         # Crear un widget de etiqueta para mostrar la imagen dentro del marco
-        self.image_label = tk.Label(self.image_frame, image=self.image)
+        self.image_label = ctk.CTkLabel(self.image_frame, image=self.image)
         self.image_label.image = self.image 
         self.image_label.pack()
 
         # Lista de botones
         self.buttons = []
-        initial_buttons = [("Start", self.startFunction), ("Ajustes", self.ajustesFunction), ("Salir", self.close_menu)]
-        self.createButtons(initial_buttons)
+        botones_iniciales = [("Start", self.startFunction), ("Ajustes", self.ajustesFunction), ("Salir", self.close_menu)]
+        self.createButtons(botones_iniciales)
 
         self.setResolution()
 
@@ -66,7 +68,7 @@ class MenuApp:
         width, height = resolution.split('x')
 
         # Redimensionar la imagen con la resolución especificada
-        new_image_width = round( int(width) / 3 )
+        new_image_width = round(int(width) / 3)
         new_image_height = int(height)
 
         # Redimensionar la imagen
@@ -81,24 +83,27 @@ class MenuApp:
 
     def createButtons(self, button_info):
         # Crear un marco para los botones
-        button_frame = tk.Frame(self.master)
+        button_frame = ctk.CTkFrame(self.master)
         button_frame.pack(side="right", fill="both", expand=True)
 
         for name, command in button_info:
-            button = tk.Button(button_frame, text=name, command=lambda method=command: method())
+            button = ctk.CTkButton(button_frame, text=name, command=lambda method=command: method())
             button.pack(side="top", padx=5, pady=5, fill="both", expand=True)
-            self.buttons.append(button)       
+            self.buttons.append(button)
 
     def startFunction(self):
         self.master.withdraw()  # Ocultar la ventana del menú inicial
-        player_window = tk.Toplevel(self.master)  # Crear una nueva ventana para la aplicación de reproducción de video
+        player_window = ctk.CTkToplevel(self.master)  # Crear una nueva ventana para la aplicación de reproducción de video
         self.player_app = VideoPlayerApp(player_window, self.master)  # Pasar la ventana del menú principal como parámetro
-        
+
     def ajustesFunction(self):
         print("Ajustes button clicked")
 
 def main():
-    root = tk.Tk()
+    ctk.set_appearance_mode("dark")  # Modos: "System" (default), "Dark", "Light"
+    ctk.set_default_color_theme("blue")  # Temas: "blue" (default), "green", "dark-blue"
+    
+    root = ctk.CTk()
     app = MenuApp(root)
     root.mainloop()
 
