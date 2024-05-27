@@ -36,3 +36,10 @@ Para instalar la librería Mediapipe, puedes ejecutar el siguiente comando:
 ```bash
 pip install mediapipe
 ```
+
+
+Para instalar la librería customKTinter, puedes ejecutar el siguiente comando:
+
+```bash
+py -3.11 -m pip install customtkinter
+```

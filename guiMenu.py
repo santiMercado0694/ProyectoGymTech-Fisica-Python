@@ -3,6 +3,7 @@ from PIL import Image, ImageTk
 from guiCalculadora import VideoPlayerApp 
 import customtkinter as ctk
 from PIL import Image, ImageTk
+import customtkinter as ctk
 
 class MenuApp:
     def __init__(self, master):
@@ -78,7 +79,7 @@ class MenuApp:
         self.image_resized = ImageTk.PhotoImage(self.original_image_resized)
 
         # Actualizar la imagen en el widget de etiqueta
-        self.image_label.configure(image=self.image_resized)
+        self.image_label.configure(image=self.image_resized, text="")
         self.image_label.image = self.image_resized  # Actualizar la referencia de la imagen
 
     def createButtons(self, button_info):
