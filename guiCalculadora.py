@@ -126,7 +126,7 @@ class VideoPlayerApp:
         self.slider_frame.place(in_=self.image_frame, relx=0.5, rely=1.0, anchor=ctk.CENTER)
        
         # Ejecuta graficos.py para generar los graficos correspondientes
-        self.createNewDataframe()
+        self.calcularVelocidadAceleracion()
         
         #Abre el drop-down menu para seleccionar el grafico deseado
         self.seleccion_imagen()
@@ -290,29 +290,42 @@ class VideoPlayerApp:
             print(f"Grafico guardado en {filename}")
             plt.close()
             
-    def createNewDataframe(self):
+    def calcularVelocidadAceleracion(self):
         dataframe = pd.read_csv('resultados/documents/data.csv', index_col=[0])
-        df2 = pd.DataFrame()
-        df2['posicion_x'] = dataframe['LEFT_WRIST_x(m)']
-        df2['posicion_y'] = dataframe['LEFT_WRIST_y(m)']
-        df2['angulo'] = dataframe['Angulo']
-        df2['tiempo'] = dataframe['tiempo(seg)']
 
-        df2.dropna(inplace=True)
+         # Calcular la diferencia angular y temporal
+        dataframe['dif_angular'] = dataframe['Angulo'].diff()
+        dataframe['dif_temporal'] = dataframe['tiempo(seg)'].diff()
 
-        df2['dif_angular'] = df2['angulo'].diff()
-        df2['dif_temporal'] = df2['tiempo'].diff()
-        df2['vel_angular'] = abs(df2['dif_angular'] / df2['dif_temporal'])
+        # Calcular la velocidad angular
+        dataframe['Velocidad_angular'] = abs(dataframe['dif_angular'] / dataframe['dif_temporal'])
 
-        df2['dif_vel_angular'] = df2['vel_angular'].diff()
-        df2['aceleracion_angular'] = abs(df2['dif_vel_angular'] / df2['dif_temporal'])
+        # Calcular la diferencia de la velocidad angular y la aceleración angular
+        dataframe['dif_velocidad_angular'] = dataframe['Velocidad_angular'].diff()
+        dataframe['Aceleracion_angular'] = abs(dataframe['dif_velocidad_angular'] / dataframe['dif_temporal'])
 
-        tiempo = df2['tiempo']
-        datos = [df2['posicion_x'], df2['posicion_y'],df2['angulo'],df2['vel_angular'],df2['aceleracion_angular']]
+        # Eliminar filas con valores NaN
+        dataframe.dropna(inplace=True)
+
+        # Guardar los datos actualizados en el mismo archivo CSV
+        dataframe.to_csv('resultados/documents/data.csv')
+
+        tiempo = dataframe['tiempo(seg)']
+        datos = [dataframe['LEFT_WRIST_x(m)'], dataframe['LEFT_WRIST_y(m)'],dataframe['Angulo'],dataframe['Velocidad_angular'],dataframe['Aceleracion_angular']]
         titulos = ['Posicion X Muneca', 'Posicion Y Muneca','Angulo del brazo','Velocidad Angular','Aceleracion Angular']
         unidades = ['m', 'm', 'rad', 'rad/seg', 'rad/seg^2']
 
         self.generarGraficos(tiempo, datos, titulos, unidades)
+
+    #def calcularFuerzaBicep(self):
+        #inertia_weight = mass_weight * radius_weight ** 2
+        #inertia_forearm = mass_forearm * radius_forearm ** 2
+        #sum_moment = (inertia_weight + inertia_forearm) * df['angular_acceleration']
+        #df['force_bicep'] = (sum_moment - moment_weight - moment_forearm) / (radius_bicep * np.sin(df['theta_wrist']))
+
+        # Calcular inercias
+        
+        
 
 def on_closing():
     sys.exit(0)
