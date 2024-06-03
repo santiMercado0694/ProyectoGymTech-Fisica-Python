@@ -304,6 +304,9 @@ class VideoPlayerApp:
         dataframe['dif_velocidad_angular'] = dataframe['Velocidad_angular'].diff()
         dataframe['Aceleracion_angular'] = abs(dataframe['dif_velocidad_angular'] / dataframe['dif_temporal'])
 
+        # Calcula la fuerza del bicep
+        srcCalculadora.calcularFuerzaBicep(dataframe)
+
         # Eliminar filas con valores NaN
         dataframe.dropna(inplace=True)
 
@@ -316,16 +319,6 @@ class VideoPlayerApp:
         unidades = ['m', 'm', 'rad', 'rad/seg', 'rad/seg^2']
 
         self.generarGraficos(tiempo, datos, titulos, unidades)
-
-    #def calcularFuerzaBicep(self):
-        #inertia_weight = mass_weight * radius_weight ** 2
-        #inertia_forearm = mass_forearm * radius_forearm ** 2
-        #sum_moment = (inertia_weight + inertia_forearm) * df['angular_acceleration']
-        #df['force_bicep'] = (sum_moment - moment_weight - moment_forearm) / (radius_bicep * np.sin(df['theta_wrist']))
-
-        # Calcular inercias
-        
-        
 
 def on_closing():
     sys.exit(0)
