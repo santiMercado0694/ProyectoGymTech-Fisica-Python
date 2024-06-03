@@ -169,7 +169,6 @@ def calcularFuerzaBicep (dataframe):
 
     #Calcular suma de momentos
     dataframe['suma_momentos'] = (inercia_antebrazo + inercia_pesa) * dataframe['Aceleracion_angular']
-    dataframe['Fuerza_bicep'] = (dataframe['suma_momentos'] - dataframe['Momento_pesa'] - dataframe['Momento_antebrazo']) / (RADIO_BICEP * dataframe['Angulo'])
+    dataframe['Fuerza_bicep'] = (dataframe['suma_momentos'] - dataframe['Momento_pesa'] - dataframe['Momento_antebrazo']) / (RADIO_BICEP * np.sin(dataframe['Angulo']))
 
-    #dataframe.to_csv('resultados/documents/data.csv')
 

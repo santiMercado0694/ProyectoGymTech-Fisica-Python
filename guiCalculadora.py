@@ -140,7 +140,7 @@ class VideoPlayerApp:
         self.dropdown_frame = ctk.CTkFrame(self.video_frame)
         self.dropdown_frame.grid(column=2, row=0, padx=10)
 
-        self.options = ["Posicion Muñeca x", "Posicion Muñeca y", "Angulo del Brazo", "Velocidad Angular", "Aceleracion Angular"]
+        self.options = ["Posicion Muñeca x", "Posicion Muñeca y", "Angulo del Brazo", "Velocidad Angular", "Aceleracion Angular", "Fuerza Bicep"]
         self.selected_option = ctk.StringVar(value=self.options[0])
 
         self.dropdown = ctk.CTkComboBox(self.dropdown_frame, variable=self.selected_option, values=self.options, command=self.on_dropdown_changed)
@@ -157,6 +157,7 @@ class VideoPlayerApp:
             "Angulo del Brazo": "resultados\\graficos\\angulo_del_brazo.png",
             "Velocidad Angular": "resultados\\graficos\\velocidad_angular.png",
             "Aceleracion Angular": "resultados\\graficos\\aceleracion_angular.png",
+            "Fuerza Bicep": "resultados\\graficos\\fuerza_bicep.png",
         }
         self.load_image(image_paths.get(value, "loadImage.png"))
         self.show_image()
@@ -267,8 +268,6 @@ class VideoPlayerApp:
         self.image_label.configure(image=img_tk_with_line)
         self.image_label.image = img_tk_with_line
 
-  
-
     def generarGraficos(self, tiempo, datos, titulos, unidades):
         if not os.path.exists('resultados/graficos'):
             os.makedirs('resultados/graficos')
@@ -314,9 +313,9 @@ class VideoPlayerApp:
         dataframe.to_csv('resultados/documents/data.csv')
 
         tiempo = dataframe['tiempo(seg)']
-        datos = [dataframe['LEFT_WRIST_x(m)'], dataframe['LEFT_WRIST_y(m)'],dataframe['Angulo'],dataframe['Velocidad_angular'],dataframe['Aceleracion_angular']]
-        titulos = ['Posicion X Muneca', 'Posicion Y Muneca','Angulo del brazo','Velocidad Angular','Aceleracion Angular']
-        unidades = ['m', 'm', 'rad', 'rad/seg', 'rad/seg^2']
+        datos = [dataframe['LEFT_WRIST_x(m)'], dataframe['LEFT_WRIST_y(m)'],dataframe['Angulo'],dataframe['Velocidad_angular'],dataframe['Aceleracion_angular'],dataframe['Fuerza_bicep']]
+        titulos = ['Posicion X Muneca', 'Posicion Y Muneca','Angulo del brazo','Velocidad Angular','Aceleracion Angular','Fuerza Bicep']
+        unidades = ['m', 'm', 'rad', 'rad/seg', 'rad/seg^2', 'Newton']
 
         self.generarGraficos(tiempo, datos, titulos, unidades)
 
