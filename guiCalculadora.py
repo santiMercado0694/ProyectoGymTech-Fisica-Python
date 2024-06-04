@@ -304,7 +304,7 @@ class VideoPlayerApp:
         dataframe['Aceleracion_angular'] = abs(dataframe['dif_velocidad_angular'] / dataframe['dif_temporal'])
 
         # Calcula la fuerza del bicep
-        srcCalculadora.calcularFuerzaBicep(dataframe)
+        srcCalculadora.calcularFuerzaBicep(dataframe, float(self.masa_entry.get()))
 
         # Eliminar filas con valores NaN
         dataframe.dropna(inplace=True)
