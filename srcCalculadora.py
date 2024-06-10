@@ -7,6 +7,9 @@ import math
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
 video_ready_callback = None
+LARGO_ANTEBRAZO= 0.30
+MASA_ANTEBRAZO = 1.8
+RADIO_BICEP = 0.06
 
 def track_pose(video_path,masaPesa):
 
@@ -14,9 +17,8 @@ def track_pose(video_path,masaPesa):
     OUTPUT_VIDEO_PATH = 'resultados/video/tracked_video.mp4'
     OUTPUT_CSV_PATH = 'resultados/documents/data.csv'
     FPS = 30
-    LARGO_ANTEBRAZO= 0.30
-    MASA_PESA= masaPesa
-    GRAVEDAD= 9.81
+    GRAVEDAD = 9.81
+    masa_pesa = masaPesa
 
     cap = cv2.VideoCapture(VIDEO_PATH)
 
@@ -31,8 +33,9 @@ def track_pose(video_path,masaPesa):
         columns_cartesian.append(landmark.name + '_x(m)')
         columns_cartesian.append(landmark.name + '_y(m)')
     columns_cartesian.append("Angulo")
-    columns_cartesian.append("VelocidadAngular")
-    columns_cartesian.append("Torque")
+    columns_cartesian.append("Velocidad_angular")
+    columns_cartesian.append("Momento_pesa")
+    columns_cartesian.append("Momento_antebrazo")
     pose_data_cartesian = pd.DataFrame(columns=columns_cartesian)
 
     pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
@@ -97,17 +100,24 @@ def track_pose(video_path,masaPesa):
                                                                  (results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].x,results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].y),
                                                                  (results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER].x,results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER].y))
 
-            #Se calcula el torque y se lo agrega al csv
-            torque = LARGO_ANTEBRAZO * MASA_PESA * GRAVEDAD * math.sin(angulo_entre_vectores((results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].x,results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].y),
+            #Se calcula el momento de la pesa y se lo agrega al csv
+            momento_pesa = masa_pesa * GRAVEDAD * math.sin(angulo_entre_vectores((results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].x,results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].y),
                                                                                              (results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].x,results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].y),
                                                                                              (results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].x,1)))
-            pose_row_cartesian["Torque"] = torque
+            pose_row_cartesian["Momento_pesa"] = momento_pesa
+
+            #Se calcula el momento del antebrazo y se lo agrega al csv
+            momento_antebrazo = MASA_ANTEBRAZO * GRAVEDAD * math.sin(angulo_entre_vectores((results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].x,results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].y),
+                                                                                             (results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].x,results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].y),
+                                                                                             (results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].x,1)))
+            pose_row_cartesian["Momento_antebrazo"] = momento_antebrazo
         else:
             for landmark in landmarks_of_interest:
                 pose_row_cartesian[landmark.name + '_x(m)'] = None
                 pose_row_cartesian[landmark.name + '_y(m)'] = None
             pose_row_cartesian["Angulo"]= None
-            pose_row_cartesian["Torque"] = None
+            pose_row_cartesian["Momento_pesa"] = None
+            pose_row_cartesian["Momento_antebrazo"] = None
         
         #Contador de repeticiones
         if previous_Y is not None:
@@ -151,3 +161,15 @@ def angulo_entre_vectores(codo_pos, muneca_pos, hombro_pos):
     angulo = calcular_angulo(vector_codo_muneca, vector_codo_hombro)
     return angulo
 
+def calcularFuerzaBicep (dataframe, masa_pesa):
+    #Calcular inercias
+    inercia_antebrazo = (MASA_ANTEBRAZO * (LARGO_ANTEBRAZO/2) ** 2) / 12
+    inercia_pesa = (masa_pesa * LARGO_ANTEBRAZO ** 2) / 12
+
+    #Calcular suma de momentos
+    dataframe['suma_momentos'] = (inercia_antebrazo + inercia_pesa) * dataframe['Aceleracion_angular']
+    dataframe['Fuerza_bicep'] = -((dataframe['suma_momentos'] - dataframe['Momento_pesa'] - dataframe['Momento_antebrazo']) / (RADIO_BICEP * np.sin(dataframe['Angulo'])))
+
+    print("Inercia antebrazo: ", inercia_antebrazo)
+    print("Inercia pesa: ", inercia_pesa)
+    print("Masa pesa: ", masa_pesa)
