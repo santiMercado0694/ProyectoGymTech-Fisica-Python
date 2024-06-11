@@ -9,21 +9,22 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import customtkinter as ctk
-import os 
+import os
+
 
 class VideoPlayerApp:
     frameNumber = 0
     frames = 30
 
-    def __init__(self, master,menu_window):
+    def __init__(self, master, menu_window):
         self.master = master
         self.menu_window = menu_window
         self.master.title("Reproductor de Video")
-        
+
         self.video_path = None
         self.video_cap = None
         self.is_playing = False
-        
+
         self.create_widgets()
 
     # Frame principal para el reproductor de video
@@ -31,30 +32,49 @@ class VideoPlayerApp:
         self.video_frame = ctk.CTkFrame(self.master)
         self.video_frame.pack(padx=10, pady=10)
 
-        self.btn_open = ctk.CTkButton(self.video_frame, text="Seleccionar Video", command=self.open_video)
+        self.btn_open = ctk.CTkButton(
+            self.video_frame, text="Seleccionar Video", command=self.open_video
+        )
         self.btn_open.grid(column=0, row=0)
 
-        self.btn_goBack = ctk.CTkButton(self.video_frame, text="Volver al Menú", command=self.back_to_menu)
+        self.btn_goBack = ctk.CTkButton(
+            self.video_frame, text="Volver al Menú", command=self.back_to_menu
+        )
         self.btn_goBack.grid(column=0, row=1)
-        
+
         # Agrega un campo de entrada para la masa de la pesa en la interfaz de usuario
         self.masa_entry_label = ctk.CTkLabel(self.video_frame, text="Masa de la pesa:")
         self.masa_entry_label.grid(column=0, row=2)
         self.masa_entry = ctk.CTkEntry(self.video_frame)
         self.masa_entry.grid(column=1, row=2)
 
-    #Crea el frame de los botones de control
-    def __create_frame_botones_control(self,gui):
+    # Crea el frame de los botones de control
+    def __create_frame_botones_control(self, gui):
         self.control_frame = ctk.CTkFrame(self.video_frame)
         self.control_frame.grid(column=1, row=0)
 
-        self.btn_play = ctk.CTkButton(self.control_frame, text="\u23F5", command=self.play_video, state=ctk.DISABLED)
+        self.btn_play = ctk.CTkButton(
+            self.control_frame,
+            text="\u23F5",
+            command=self.play_video,
+            state=ctk.DISABLED,
+        )
         self.btn_play.pack(side=ctk.LEFT)
 
-        self.btn_stop = ctk.CTkButton(self.control_frame, text="\u23F8", command=self.stop_video, state=ctk.DISABLED)
+        self.btn_stop = ctk.CTkButton(
+            self.control_frame,
+            text="\u23F8",
+            command=self.stop_video,
+            state=ctk.DISABLED,
+        )
         self.btn_stop.pack(side=ctk.LEFT)
 
-        self.btn_restart = ctk.CTkButton(self.control_frame, text="\u23F9", command=self.restart_video, state=ctk.DISABLED)
+        self.btn_restart = ctk.CTkButton(
+            self.control_frame,
+            text="\u23F9",
+            command=self.restart_video,
+            state=ctk.DISABLED,
+        )
         self.btn_restart.pack(side=ctk.LEFT)
 
         self.video_label = ctk.CTkLabel(self.video_frame, text="")
@@ -66,12 +86,12 @@ class VideoPlayerApp:
         self.image_frame.pack(padx=10, pady=10)
 
     # Crear un label para la imagen
-    def __create_frame_image_label(self,gui):
+    def __create_frame_image_label(self, gui):
         self.image_label = ctk.CTkLabel(self.image_frame, text="")
-        self.image_label.pack() 
+        self.image_label.pack()
 
     # Cargamos la imagen de presentación
-    def __create_frame_imagen_presentacion(self,gui):
+    def __create_frame_imagen_presentacion(self, gui):
         self.load_image("loadImage.png")
         self.show_image()
 
@@ -91,64 +111,90 @@ class VideoPlayerApp:
         self.menu_window.deiconify()  # Mostrar la ventana del menú principal
 
     def open_video(self):
-     try:
+        try:
             masa_pesa = float(self.masa_entry.get())
-     except ValueError:
-            tk.messagebox.showerror("Error", "¡Por favor, ingrese un valor numérico para la masa de la pesa!")
+        except ValueError:
+            tk.messagebox.showerror(
+                "Error",
+                "¡Por favor, ingrese un valor numérico para la masa de la pesa!",
+            )
             return
-     self.video_path = filedialog.askopenfilename(filetypes=[("Archivos de Video", "*.mp4;*.avi;*.mkv")])
-     if self.video_path:
-        # Llama a la funcion track_pose de srcCalculadora.py
-        srcCalculadora.video_ready_callback = self.video_ready_callback
-        srcCalculadora.track_pose(self.video_path,masa_pesa)
-        
-        # Verificar si ya existe una barra de reproducción y destruirla si es el caso
-        if hasattr(self, 'slider') and self.slider is not None:
-            self.slider.destroy()
-            self.frameNumber = 0
-                   
-        # Abre el video generado
-        self.video_cap = cv2.VideoCapture('resultados\\video\\tracked_video.mp4')
+        self.video_path = filedialog.askopenfilename(
+            filetypes=[("Archivos de Video", "*.mp4;*.avi;*.mkv")]
+        )
+        if self.video_path:
+            # Llama a la funcion track_pose de srcCalculadora.py
+            srcCalculadora.video_ready_callback = self.video_ready_callback
+            srcCalculadora.track_pose(self.video_path, masa_pesa)
 
-        # Consigue los frames totales para generar la slider con ese numero maximo
-        self.frames = int(self.video_cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            # Verificar si ya existe una barra de reproducción y destruirla si es el caso
+            if hasattr(self, "slider") and self.slider is not None:
+                self.slider.destroy()
+                self.frameNumber = 0
 
-       # Frame principal para el deslizador
-        self.slider_frame = ctk.CTkFrame(self.master)
-        self.slider_frame.pack(pady=10)
+            # Abre el video generado
+            self.video_cap = cv2.VideoCapture("resultados\\video\\tracked_video.mp4")
 
-        # Crear el deslizador con una longitud fija
-        slider_length = 466
-        self.slider = ctk.CTkSlider(self.slider_frame, from_=0, to=self.frames - 1, orientation="horizontal", command=self.on_slider_changed, width=slider_length)
-        self.slider.pack(fill="x", expand=True)
+            # Consigue los frames totales para generar la slider con ese numero maximo
+            self.frames = int(self.video_cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-        # Centrar el frame del deslizador debajo del frame de la imagen
-        self.slider_frame.place(in_=self.image_frame, relx=0.5, rely=1.0, anchor=ctk.CENTER)
-       
-        # Ejecuta graficos.py para generar los graficos correspondientes
-        self.calcularVelocidadAceleracion()
-        
-        #Abre el drop-down menu para seleccionar el grafico deseado
-        self.seleccion_imagen()
+            # Frame principal para el deslizador
+            self.slider_frame = ctk.CTkFrame(self.master)
+            self.slider_frame.pack(pady=10)
 
-        self.show_frame()
+            # Crear el deslizador con una longitud fija
+            slider_length = 466
+            self.slider = ctk.CTkSlider(
+                self.slider_frame,
+                from_=0,
+                to=self.frames - 1,
+                orientation="horizontal",
+                command=self.on_slider_changed,
+                width=slider_length,
+            )
+            self.slider.pack(fill="x", expand=True)
 
-    #Selecciona una imagen default para el video
-    def seleccion_imagen (self) :
+            # Centrar el frame del deslizador debajo del frame de la imagen
+            self.slider_frame.place(
+                in_=self.image_frame, relx=0.5, rely=1.0, anchor=ctk.CENTER
+            )
+
+            # Ejecuta graficos.py para generar los graficos correspondientes
+            self.calcularVelocidadAceleracion()
+
+            # Abre el drop-down menu para seleccionar el grafico deseado
+            self.seleccion_imagen()
+
+            self.show_frame()
+
+    # Selecciona una imagen default para el video
+    def seleccion_imagen(self):
         self.load_image("resultados\\graficos\\posicion_x_muneca.png")
         self.show_image()
         self.dropdown_frame = ctk.CTkFrame(self.video_frame)
         self.dropdown_frame.grid(column=2, row=0, padx=10)
 
-        self.options = ["Posicion Muñeca x", "Posicion Muñeca y", "Angulo del Brazo", "Velocidad Angular", "Aceleracion Angular", "Fuerza Bicep"]
+        self.options = [
+            "Posicion Muñeca x",
+            "Posicion Muñeca y",
+            "Angulo del Brazo",
+            "Velocidad Angular",
+            "Aceleracion Angular",
+            "Fuerza Bicep",
+        ]
         self.selected_option = ctk.StringVar(value=self.options[0])
 
-        self.dropdown = ctk.CTkComboBox(self.dropdown_frame, variable=self.selected_option, values=self.options, command=self.on_dropdown_changed)
+        self.dropdown = ctk.CTkComboBox(
+            self.dropdown_frame,
+            variable=self.selected_option,
+            values=self.options,
+            command=self.on_dropdown_changed,
+        )
         self.dropdown.pack()
-        
-        self.dropdown.bind("<ComboboxSelected>", lambda e:self.on_dropdown_changed)
-        
-    #Encuentra la ruta de la imagen seleccionada 
+
+        self.dropdown.bind("<ComboboxSelected>", lambda e: self.on_dropdown_changed)
+
+    # Encuentra la ruta de la imagen seleccionada
     def on_dropdown_changed(self, value):
         selected = self.selected_option.get()
         image_paths = {
@@ -168,15 +214,23 @@ class VideoPlayerApp:
             self.frameNumber = int(val)
             self.video_cap.set(cv2.CAP_PROP_POS_FRAMES, self.frameNumber)
             self.show_frame()
-            self.btn_restart.configure(state=ctk.NORMAL)  # Habilitar el botón de reinicio cuando se ajusta manualmente el fotograma
-            if self.frameNumber == self.frames - 1:  # Verificar si se alcanza el último fotograma
-                self.btn_play.configure(state=ctk.DISABLED)  # Deshabilitar el botón de play al llegar al final
+            self.btn_restart.configure(
+                state=ctk.NORMAL
+            )  # Habilitar el botón de reinicio cuando se ajusta manualmente el fotograma
+            if (
+                self.frameNumber == self.frames - 1
+            ):  # Verificar si se alcanza el último fotograma
+                self.btn_play.configure(
+                    state=ctk.DISABLED
+                )  # Deshabilitar el botón de play al llegar al final
 
-    # Funcion auxiliar para que compruebe que se genero el video 
+    # Funcion auxiliar para que compruebe que se genero el video
     def video_ready_callback(self):
         self.btn_play.configure(state=ctk.NORMAL)
-        self.btn_stop.configure(state=ctk.DISABLED)     # Deshabilitar el botón de pausa al inicio
-        self.btn_restart.configure(state=ctk.NORMAL)  
+        self.btn_stop.configure(
+            state=ctk.DISABLED
+        )  # Deshabilitar el botón de pausa al inicio
+        self.btn_restart.configure(state=ctk.NORMAL)
 
     # Reproduce el video
     def play_video(self):
@@ -184,18 +238,24 @@ class VideoPlayerApp:
             self.is_playing = True
             self.btn_play.configure(state=ctk.DISABLED)
             self.btn_stop.configure(state=ctk.NORMAL)
-            self.btn_restart.configure(state=ctk.DISABLED)  # Deshabilitar el botón de reinicio mientras se reproduce
+            self.btn_restart.configure(
+                state=ctk.DISABLED
+            )  # Deshabilitar el botón de reinicio mientras se reproduce
             self.show_frame()
 
-    #Pausa el video
+    # Pausa el video
     def stop_video(self):
         if self.video_cap:
             self.is_playing = False
-            if self.frameNumber < self.frames - 1:  # Verificar si no se ha llegado al final del video
-                self.btn_play.configure(state=ctk.NORMAL)  # Habilitar el botón de play solo si no se ha llegado al final
+            if (
+                self.frameNumber < self.frames - 1
+            ):  # Verificar si no se ha llegado al final del video
+                self.btn_play.configure(
+                    state=ctk.NORMAL
+                )  # Habilitar el botón de play solo si no se ha llegado al final
             self.btn_stop.configure(state=ctk.DISABLED)
 
-    #Reinicia el video
+    # Reinicia el video
     def restart_video(self):
         if self.video_cap:
             self.frameNumber = 0
@@ -204,7 +264,7 @@ class VideoPlayerApp:
             self.btn_play.configure(state=ctk.NORMAL)
             self.btn_stop.configure(state=ctk.DISABLED)
 
-    #Muestra el fotograma en el video
+    # Muestra el fotograma en el video
     def show_frame(self):
         ret, frame = self.video_cap.read()
         if ret:
@@ -218,26 +278,32 @@ class VideoPlayerApp:
             if self.is_playing:
                 self.video_label.after(30, self.show_frame)
             else:
-                self.btn_restart.configure(state=ctk.NORMAL) 
+                self.btn_restart.configure(state=ctk.NORMAL)
             self.update_slider_position(self.frameNumber)
             self.frameNumber += 1
             self.draw_indicator_line()
             # Verificar si se alcanza el último fotograma
             if self.frameNumber == self.frames:
-                self.btn_play.configure(state=ctk.DISABLED)  # Deshabilitar el botón de play al llegar al final
-                self.btn_restart.configure(state=ctk.NORMAL) # Habilitar el botón de reinicio al llegar al final del video
+                self.btn_play.configure(
+                    state=ctk.DISABLED
+                )  # Deshabilitar el botón de play al llegar al final
+                self.btn_restart.configure(
+                    state=ctk.NORMAL
+                )  # Habilitar el botón de reinicio al llegar al final del video
         else:
             self.stop_video()
 
     # Cargar una imagen desde el archivo
-    def load_image(self,ruta):
-        self.image_path = ruta 
+    def load_image(self, ruta):
+        self.image_path = ruta
         self.image = Image.open(self.image_path)
 
     # Mostrar la imagen en el frame
     def show_image(self):
         image_width, image_height = self.image.size
-        resized_image = self.image.resize((int(image_width), int(image_height)))  # Ajustar el tamaño de la imagen
+        resized_image = self.image.resize(
+            (int(image_width), int(image_height))
+        )  # Ajustar el tamaño de la imagen
         self.img_tk = ImageTk.PhotoImage(resized_image)
         self.image_label.configure(image=self.img_tk)
         self.image_label.image = self.img_tk
@@ -245,63 +311,67 @@ class VideoPlayerApp:
     def draw_indicator_line(self):
         # Crear una imagen a partir del archivo existente
         image_array = np.array(self.image)
-        
+
         # Dimensiones de la imagen
         height, width, _ = image_array.shape
-        
+
         # Calcular la posición x de la línea indicadora basada en el fotograma actual
-        indicator_x = int((self.frameNumber / self.frames * (width * 0.74))) 
+        indicator_x = int((self.frameNumber / self.frames * (width * 0.74)))
         indicator_x += int(width * 0.14)
-        
+
         # Calcular el punto de inicio y final de la línea (y)
         start_point = (indicator_x, 0)
         end_point = (indicator_x, height)
-        
+
         # Dibujar la línea indicadora (por ejemplo, en color rojo)
-        cv2.line(image_array, start_point, end_point, (255, 0,0, 255), thickness=2)
-        
+        cv2.line(image_array, start_point, end_point, (255, 0, 0, 255), thickness=2)
+
         # Convertir la imagen modificada a formato ImageTk
         image_with_line = Image.fromarray(image_array)
         img_tk_with_line = ImageTk.PhotoImage(image_with_line)
-        
+
         # Mostrar la imagen actualizada en el label
         self.image_label.configure(image=img_tk_with_line)
         self.image_label.image = img_tk_with_line
 
     def generarGraficos(self, tiempo, datos, titulos, unidades):
-        if not os.path.exists('resultados/graficos'):
-            os.makedirs('resultados/graficos')
+        if not os.path.exists("resultados/graficos"):
+            os.makedirs("resultados/graficos")
         for i, (dato, titulo, unidad) in enumerate(zip(datos, titulos, unidades)):
             fig, ax = plt.subplots(figsize=(6, 4))
             # Suavizar los datos con una interpolación cúbica
             tiempo_suave = np.linspace(tiempo.min(), tiempo.max(), 500)
             datos_suave = np.interp(tiempo_suave, tiempo, dato)
-            
-            ax.plot(tiempo_suave, datos_suave, linestyle='-', color='b')
+
+            ax.plot(tiempo_suave, datos_suave, linestyle="-", color="b")
             ax.set_title(titulo)
-            ax.set_xlabel('Tiempo(seg)')
+            ax.set_xlabel("Tiempo(seg)")
             ax.set_ylabel(unidad)
             ax.grid(True)
-            
+
             # Guardar el gráfico con el nombre correspondiente
             filename = f'resultados/graficos/{titulo.replace(" ", "_").lower()}.png'
             plt.savefig(filename)
             print(f"Grafico guardado en {filename}")
             plt.close()
-            
-    def calcularVelocidadAceleracion(self):
-        dataframe = pd.read_csv('resultados/documents/data.csv', index_col=[0])
 
-         # Calcular la diferencia angular y temporal
-        dataframe['dif_angular'] = dataframe['Angulo'].diff()
-        dataframe['dif_temporal'] = dataframe['tiempo(seg)'].diff()
+    def calcularVelocidadAceleracion(self):
+        dataframe = pd.read_csv("resultados/documents/data.csv", index_col=[0])
+
+        # Calcular la diferencia angular y temporal
+        dataframe["dif_angular"] = dataframe["Angulo"].diff()
+        dataframe["dif_temporal"] = dataframe["tiempo(seg)"].diff()
 
         # Calcular la velocidad angular
-        dataframe['Velocidad_angular'] = abs(dataframe['dif_angular'] / dataframe['dif_temporal'])
+        dataframe["Velocidad_angular"] = abs(
+            dataframe["dif_angular"] / dataframe["dif_temporal"]
+        )
 
         # Calcular la diferencia de la velocidad angular y la aceleración angular
-        dataframe['dif_velocidad_angular'] = dataframe['Velocidad_angular'].diff()
-        dataframe['Aceleracion_angular'] = abs(dataframe['dif_velocidad_angular'] / dataframe['dif_temporal'])
+        dataframe["dif_velocidad_angular"] = dataframe["Velocidad_angular"].diff()
+        dataframe["Aceleracion_angular"] = abs(
+            dataframe["dif_velocidad_angular"] / dataframe["dif_temporal"]
+        )
 
         # Calcula la fuerza del bicep
         srcCalculadora.calcularFuerzaBicep(dataframe, float(self.masa_entry.get()))
@@ -310,17 +380,33 @@ class VideoPlayerApp:
         dataframe.dropna(inplace=True)
 
         # Guardar los datos actualizados en el mismo archivo CSV
-        dataframe.to_csv('resultados/documents/data.csv')
+        dataframe.to_csv("resultados/documents/data.csv")
 
-        tiempo = dataframe['tiempo(seg)']
-        datos = [dataframe['LEFT_WRIST_x(m)'], dataframe['LEFT_WRIST_y(m)'],dataframe['Angulo'],dataframe['Velocidad_angular'],dataframe['Aceleracion_angular'],dataframe['Fuerza_bicep']]
-        titulos = ['Posicion X Muneca', 'Posicion Y Muneca','Angulo del brazo','Velocidad Angular','Aceleracion Angular','Fuerza Bicep']
-        unidades = ['m', 'm', 'rad', 'rad/seg', 'rad/seg^2', 'Newton']
+        tiempo = dataframe["tiempo(seg)"]
+        datos = [
+            dataframe["LEFT_WRIST_x(m)"],
+            dataframe["LEFT_WRIST_y(m)"],
+            dataframe["Angulo"],
+            dataframe["Velocidad_angular"],
+            dataframe["Aceleracion_angular"],
+            dataframe["Fuerza_bicep"],
+        ]
+        titulos = [
+            "Posicion X Muneca",
+            "Posicion Y Muneca",
+            "Angulo del brazo",
+            "Velocidad Angular",
+            "Aceleracion Angular",
+            "Fuerza Bicep",
+        ]
+        unidades = ["m", "m", "rad", "rad/seg", "rad/seg^2", "Newton"]
 
         self.generarGraficos(tiempo, datos, titulos, unidades)
 
+
 def on_closing():
     sys.exit(0)
+
 
 def main():
     ctk.set_appearance_mode("dark")
@@ -329,6 +415,7 @@ def main():
     root.protocol("WM_DELETE_WINDOW", on_closing)
     app = VideoPlayerApp(root)
     root.mainloop()
+
 
 if __name__ == "__main__":
     main()
