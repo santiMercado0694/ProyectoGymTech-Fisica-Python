@@ -186,7 +186,7 @@ class VideoPlayerApp:
             "Contraccion Bicep",
             "Energia cinetica",
             "Energia potencial",
-            "Energia total",
+            "Energia mecanica",
         ]
         self.selected_option = ctk.StringVar(value=self.options[0])
 
@@ -213,7 +213,7 @@ class VideoPlayerApp:
             "Contraccion Bicep": "resultados\\graficos\\contraccion_bicep.png",
             "Energia cinetica": "resultados\\graficos\\energia_cinetica.png",
             "Energia potencial": "resultados\\graficos\\energia_potencial.png",
-            "Energia total": "resultados\\graficos\\energia_total.png",
+            "Energia mecanica": "resultados\\graficos\\energia_mecanica.png",
 
         }
         self.load_image(image_paths.get(value, "loadImage.png"))
@@ -413,7 +413,7 @@ class VideoPlayerApp:
         # Energia potencial
         dataframe['Energia_potencial'] = float(self.masa_entry.get()) * 9.8 * (dataframe["Left_Wrist_y(m)_Sin_Modificar"] - dataframe['Left_Wrist_y(m)_Sin_Modificar'].first_valid_index())
         # Suma de las energias
-        dataframe['Energia_total'] = dataframe['Energia_cinetica'] + dataframe['Energia_potencial']
+        dataframe['Energia_Mecanica'] = dataframe['Energia_cinetica'] + dataframe['Energia_potencial'] * 0.000239006
         
 
        
@@ -438,7 +438,7 @@ class VideoPlayerApp:
             dataframe["Contraccion_bicep"],
             dataframe["Energia_cinetica"],
             dataframe["Energia_potencial"],
-            dataframe["Energia_total"]
+            dataframe["Energia_Mecanica"]
             
         ]
         titulos = [
@@ -451,9 +451,9 @@ class VideoPlayerApp:
             "Contraccion Bicep",
             "Energia cinetica",
             "Energia potencial",
-            "Energia total"
+            "Energia mecanica"
         ]
-        unidades = ["m", "m", "rad", "rad/seg", "rad/seg^2", "Newton","m","J","J","J"]
+        unidades = ["m", "m", "rad", "rad/seg", "rad/seg^2", "Newton","m","J","J","Kcal"]
 
         self.generarGraficos(tiempo, datos, titulos, unidades)
 
