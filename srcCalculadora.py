@@ -10,6 +10,7 @@ video_ready_callback = None
 LARGO_ANTEBRAZO= 0.30
 MASA_ANTEBRAZO = 1.8
 RADIO_BICEP = 0.06
+GRAVEDAD = 9.81
 
 def track_pose(video_path,masaPesa):
 
@@ -76,6 +77,7 @@ def track_pose(video_path,masaPesa):
         cv2.putText(image, f'Frame: {FRAME_NUMBER}', (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 3, cv2.LINE_AA)
         cv2.putText(image, f'Segundo: {tiempo_segundos:.2f}', (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 3, cv2.LINE_AA)
         cv2.putText(image, f'Repeticiones: {repeticiones}', (50, int(cap.get(4)) - 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 3, cv2.LINE_AA)
+        
 
         # Guardar el cuadro procesado en el video de salida
         video_writer.write(cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
@@ -87,6 +89,9 @@ def track_pose(video_path,masaPesa):
             elbow_x = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].x
             elbow_y = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].y
 
+            pose_row_cartesian['Left_Wrist_x(m)_Sin_Modificar'] = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].x
+            pose_row_cartesian['Left_Wrist_y(m)_Sin_Modificar'] = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].y
+            
             for landmark in landmarks_of_interest:
                 # Calcular las coordenadas relativas al codo y pasarlas a metros
                 rel_x = (results.pose_landmarks.landmark[landmark].x - elbow_x) * 1.58
@@ -111,6 +116,8 @@ def track_pose(video_path,masaPesa):
                                                                                              (results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].x,results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].y),
                                                                                              (results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].x,1)))
             pose_row_cartesian["Momento_antebrazo"] = momento_antebrazo
+            pose_row_cartesian["Contraccion_bicep"] = calcular_tamano_bicep_con_contraccion(pose_row_cartesian["Angulo"])
+
         else:
             for landmark in landmarks_of_interest:
                 pose_row_cartesian[landmark.name + '_x(m)'] = None
@@ -173,4 +180,35 @@ def calcularFuerzaBicep (dataframe, masa_pesa):
     print("Inercia antebrazo: ", inercia_antebrazo)
     print("Inercia pesa: ", inercia_pesa)
     print("Masa pesa: ", masa_pesa)
+
+
+
+
+def calcular_tamano_bicep_con_contraccion(angulo):
+
+    # Estimamos la que contraccion del bicep como un %35 del largo del bicep, por lo tanto si tomamos un bicep de tamaño 0.3m,
+    # la contraccion maxima seria de 0.105m (10.5cm) y la minima de 0m (completamente estirado)
+    # Por lo tanto, la longitud del bicep en base al angulo se calcula como: 
+    # longitud_bicep_contraido + proporcion_contraccion * (longitud_bicep_estirado - longitud_bicep_contraido)
+
+
+
+    # Longitud del bíceps cuando está completamente estirado y contraído
+    longitud_bicep_estirado = LARGO_ANTEBRAZO  # en m
+    longitud_bicep_contraido = 0.195  # en m
+    # Supongamos que la contracción máxima ocurre a π radianes (180 grados)
+    angulo_max_contraccion = np.pi  # radianes (180 grados)
+    
+    # Calcular la proporción de contracción basada en el ángulo
+    proporcion_contraccion = angulo / angulo_max_contraccion
+    
+    # Calcular la longitud actual del bíceps
+    longitud_actual = longitud_bicep_contraido + proporcion_contraccion * (longitud_bicep_estirado - longitud_bicep_contraido)
+    
+    return longitud_actual
+
+
+#Se calcula el trabajo del bicep en base a la fuerza, la distancia recorrida y el angulo
+def calcularTrabajoBicep (dataframe):
+    dataframe['Trabajo_bicep'] = dataframe['Fuerza_bicep'] * dataframe['Distancia_recorrida'] * np.cos(dataframe['Angulo'])
 
