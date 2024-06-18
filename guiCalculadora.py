@@ -269,14 +269,27 @@ class VideoPlayerApp:
         self.image_label.image = img_tk_with_line
 
     def generarGraficos(self, tiempo, datos, titulos, unidades):
+        errory = 0.077
+        errorx = 0.072
+        errorangulo = 0.279
+
         if not os.path.exists('resultados/graficos'):
             os.makedirs('resultados/graficos')
         for i, (dato, titulo, unidad) in enumerate(zip(datos, titulos, unidades)):
             fig, ax = plt.subplots(figsize=(6, 4))
+
             # Suavizar los datos con una interpolación cúbica
             tiempo_suave = np.linspace(tiempo.min(), tiempo.max(), 500)
             datos_suave = np.interp(tiempo_suave, tiempo, dato)
             
+            if(titulo == 'Posicion X Muneca'):
+                ax.fill_between(tiempo_suave, datos_suave - errorx, datos_suave + errorx, color='r', alpha=0.2, label='Error ±0.077')
+            elif (titulo == 'Posicion Y Muneca'):
+                    ax.fill_between(tiempo_suave, datos_suave - errory, datos_suave + errory, color='r', alpha=0.2, label='Error ±0.072')
+            elif (titulo == 'Angulo del brazo'):
+                    ax.fill_between(tiempo_suave, datos_suave - errorangulo, datos_suave + errorangulo, color='r', alpha=0.2, label='Error ±0.279')
+            
+
             ax.plot(tiempo_suave, datos_suave, linestyle='-', color='b')
             ax.set_title(titulo)
             ax.set_xlabel('Tiempo(seg)')

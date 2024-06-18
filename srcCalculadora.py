@@ -173,3 +173,4 @@ def calcularFuerzaBicep (dataframe, masa_pesa):
     print("Inercia antebrazo: ", inercia_antebrazo)
     print("Inercia pesa: ", inercia_pesa)
     print("Masa pesa: ", masa_pesa)
+
