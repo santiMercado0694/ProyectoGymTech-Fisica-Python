@@ -1,15 +1,15 @@
-import tkinter as tk
-from tkinter import filedialog
-from tkinter import ttk
-import cv2
-from PIL import Image, ImageTk
-import srcCalculadora
+import os
 import sys
+import cv2
+import srcCalculadora
+import tkinter as tk
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import customtkinter as ctk
-import os
+from tkinter import filedialog
+from tkinter import ttk
+from PIL import Image, ImageTk
 
 
 class VideoPlayerApp:
@@ -167,8 +167,6 @@ class VideoPlayerApp:
 
             self.show_frame()
 
-            
-
     # Selecciona una imagen default para el video
     def seleccion_imagen(self):
         self.load_image("resultados\\graficos\\posicion_x_muneca.png")
@@ -214,7 +212,6 @@ class VideoPlayerApp:
             "Energia cinetica": "resultados\\graficos\\energia_cinetica.png",
             "Energia potencial": "resultados\\graficos\\energia_potencial.png",
             "Energia mecanica": "resultados\\graficos\\energia_mecanica.png",
-
         }
         self.load_image(image_paths.get(value, "loadImage.png"))
         self.show_image()
@@ -350,8 +347,8 @@ class VideoPlayerApp:
         errorx = 0.072
         errorangulo = 0.279
 
-        if not os.path.exists('resultados/graficos'):
-            os.makedirs('resultados/graficos')
+        if not os.path.exists("resultados/graficos"):
+            os.makedirs("resultados/graficos")
         if not os.path.exists("resultados/graficos"):
             os.makedirs("resultados/graficos")
 
@@ -361,17 +358,37 @@ class VideoPlayerApp:
             # Suavizar los datos con una interpolación cúbica
             tiempo_suave = np.linspace(tiempo.min(), tiempo.max(), 500)
             datos_suave = np.interp(tiempo_suave, tiempo, dato)
-            
-            #Agrego errores
-            if(titulo == 'Posicion X Muneca'):
-                ax.fill_between(tiempo_suave, datos_suave - errorx, datos_suave + errorx, color='r', alpha=0.2, label='Error ±0.077')
-            elif (titulo == 'Posicion Y Muneca'):
-                    ax.fill_between(tiempo_suave, datos_suave - errory, datos_suave + errory, color='r', alpha=0.2, label='Error ±0.072')
-            elif (titulo == 'Angulo del brazo'):
-                    ax.fill_between(tiempo_suave, datos_suave - errorangulo, datos_suave + errorangulo, color='r', alpha=0.2, label='Error ±0.279')
-            
 
-            ax.plot(tiempo_suave, datos_suave, linestyle='-', color='b')
+            # Agrego errores
+            if titulo == "Posicion X Muneca":
+                ax.fill_between(
+                    tiempo_suave,
+                    datos_suave - errorx,
+                    datos_suave + errorx,
+                    color="r",
+                    alpha=0.2,
+                    label="Error ±0.077",
+                )
+            elif titulo == "Posicion Y Muneca":
+                ax.fill_between(
+                    tiempo_suave,
+                    datos_suave - errory,
+                    datos_suave + errory,
+                    color="r",
+                    alpha=0.2,
+                    label="Error ±0.072",
+                )
+            elif titulo == "Angulo del brazo":
+                ax.fill_between(
+                    tiempo_suave,
+                    datos_suave - errorangulo,
+                    datos_suave + errorangulo,
+                    color="r",
+                    alpha=0.2,
+                    label="Error ±0.279",
+                )
+
+            ax.plot(tiempo_suave, datos_suave, linestyle="-", color="b")
             ax.set_title(titulo)
             ax.set_xlabel("Tiempo(seg)")
             ax.set_ylabel(unidad)
@@ -383,40 +400,51 @@ class VideoPlayerApp:
             print(f"Grafico guardado en {filename}")
             plt.close()
 
-        
-
     def calcularVelocidadAceleracion(self):
         dataframe = pd.read_csv("resultados/documents/data.csv", index_col=[0])
-        inercia_pesa = (1 * 0.3 ** 2) / 12
+        inercia_pesa = (1 * 0.3**2) / 12
         # Calcular la diferencia angular y temporal
         dataframe["dif_angular"] = dataframe["Angulo"].diff()
         dataframe["dif_temporal"] = dataframe["tiempo(seg)"].diff()
 
-
         # Calcular la velocidad angular
-        dataframe["Velocidad_angular"] = abs(dataframe["dif_angular"] / dataframe["dif_temporal"])
+        dataframe["Velocidad_angular"] = abs(
+            dataframe["dif_angular"] / dataframe["dif_temporal"]
+        )
 
         # Calcular la diferencia de la velocidad angular y la aceleración angular
         dataframe["dif_velocidad_angular"] = dataframe["Velocidad_angular"].diff()
-        dataframe["Aceleracion_angular"] = abs(dataframe["dif_velocidad_angular"] / dataframe["dif_temporal"])
+        dataframe["Aceleracion_angular"] = abs(
+            dataframe["dif_velocidad_angular"] / dataframe["dif_temporal"]
+        )
 
         # Calcular velocidad mancuerna
         # Vi = sqrt(xi-xi-1)^2 + (yi-yi-1)^2 / (ti-ti-1)
         dataframe["dif_x"] = dataframe["LEFT_WRIST_x(m)"].diff()
         dataframe["dif_y"] = dataframe["LEFT_WRIST_y(m)"].diff()
-        dataframe['velocidad_munieca'] = np.sqrt(dataframe['dif_x']**2 + dataframe['dif_y']**2) / dataframe['dif_temporal']
-
+        dataframe["velocidad_munieca"] = (
+            np.sqrt(dataframe["dif_x"] ** 2 + dataframe["dif_y"] ** 2)
+            / dataframe["dif_temporal"]
+        )
 
         # Calculo las Energias
         # Energia cinetica
-        dataframe['Energia_cinetica'] = 0.5 * float(self.masa_entry.get()) * ((dataframe['velocidad_munieca']) ** 2) 
+        dataframe["Energia_cinetica"] = (
+            0.5 * float(self.masa_entry.get()) * ((dataframe["velocidad_munieca"]) ** 2)
+        )
         # Energia potencial
-        dataframe['Energia_potencial'] = float(self.masa_entry.get()) * 9.8 * (dataframe["Left_Wrist_y(m)_Sin_Modificar"] - dataframe['Left_Wrist_y(m)_Sin_Modificar'].first_valid_index())
+        dataframe["Energia_potencial"] = (
+            float(self.masa_entry.get())
+            * 9.8
+            * (
+                dataframe["Left_Wrist_y(m)_Sin_Modificar"]
+                - dataframe["Left_Wrist_y(m)_Sin_Modificar"].first_valid_index()
+            )
+        )
         # Suma de las energias
-        dataframe['Energia_Mecanica'] = dataframe['Energia_cinetica'] + dataframe['Energia_potencial'] * 0.000239006
-        
-
-       
+        dataframe["Energia_Mecanica"] = (
+            dataframe["Energia_cinetica"] + dataframe["Energia_potencial"] * 0.000239006
+        )
 
         # Calcula la fuerza del bicep
         srcCalculadora.calcularFuerzaBicep(dataframe, float(self.masa_entry.get()))
@@ -438,8 +466,7 @@ class VideoPlayerApp:
             dataframe["Contraccion_bicep"],
             dataframe["Energia_cinetica"],
             dataframe["Energia_potencial"],
-            dataframe["Energia_Mecanica"]
-            
+            dataframe["Energia_Mecanica"],
         ]
         titulos = [
             "Posicion X Muneca",
@@ -451,9 +478,20 @@ class VideoPlayerApp:
             "Contraccion Bicep",
             "Energia cinetica",
             "Energia potencial",
-            "Energia mecanica"
+            "Energia mecanica",
         ]
-        unidades = ["m", "m", "rad", "rad/seg", "rad/seg^2", "Newton","m","J","J","Kcal"]
+        unidades = [
+            "m",
+            "m",
+            "rad",
+            "rad/seg",
+            "rad/seg^2",
+            "Newton",
+            "m",
+            "J",
+            "J",
+            "Kcal",
+        ]
 
         self.generarGraficos(tiempo, datos, titulos, unidades)
 
