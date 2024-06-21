@@ -3,6 +3,7 @@ import cv2
 import pandas as pd
 import numpy as np
 import mediapipe as mp
+from scipy.ndimage import uniform_filter1d  # Importar para suavizado
 
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
@@ -13,7 +14,6 @@ RADIO_BICEP = 0.06
 GRAVEDAD = 9.81
 
 def track_pose(video_path, peso_mancuerna):
-
     VIDEO_PATH = video_path
     OUTPUT_VIDEO_PATH = "resultados/video/tracked_video.mp4"
     OUTPUT_CSV_PATH = "resultados/documents/data.csv"
@@ -37,7 +37,7 @@ def track_pose(video_path, peso_mancuerna):
     columns_cartesian.append("Angulo")
     columns_cartesian.append("Velocidad_angular")
     columns_cartesian.append("Momento_pesa")
-    columns_cartesian.append("Momento_antebrazo")
+    columns_cartesian.append("Distancia_recorrida(m)")
     pose_data_cartesian = pd.DataFrame(columns=columns_cartesian)
 
     pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
@@ -51,6 +51,8 @@ def track_pose(video_path, peso_mancuerna):
     FRAME_NUMBER = 0
     repeticiones = 0
     previous_Y = None
+    previous_wrist_x = None
+    previous_wrist_y = None
 
     while cap.isOpened():
         ret, frame = cap.read()
@@ -153,7 +155,8 @@ def track_pose(video_path, peso_mancuerna):
             # Obtener las coordenadas del codo
             elbow_x = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].x
             elbow_y = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].y
-
+            
+            # Obtener las coordenadas de la muñeca sin modificar
             pose_row_cartesian["Left_Wrist_x(m)_Sin_Modificar"] = (
                 results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].x
             )
@@ -168,7 +171,11 @@ def track_pose(video_path, peso_mancuerna):
 
                 pose_row_cartesian[landmark.name + "_x(m)"] = rel_x
                 pose_row_cartesian[landmark.name + "_y(m)"] = rel_y
-
+            
+            # Obtener las coordenadas relativas de la muñeca
+            wrist_x = pose_row_cartesian["LEFT_WRIST_x(m)"]
+            wrist_y = pose_row_cartesian["LEFT_WRIST_y(m)"]
+            
             # Se calcula y agrega al csv el angulo del brazo en ese frame
             pose_row_cartesian["Angulo"] = angulo_entre_vectores(
                 (
@@ -191,7 +198,8 @@ def track_pose(video_path, peso_mancuerna):
 
             # Se calcula el momento de la pesa y se lo agrega al csv
             momento_pesa = (
-                masa_pesa
+                LARGO_ANTEBRAZO
+                * masa_pesa
                 * GRAVEDAD
                 * math.sin(
                     angulo_entre_vectores(
@@ -222,49 +230,30 @@ def track_pose(video_path, peso_mancuerna):
             )
             pose_row_cartesian["Momento_pesa"] = momento_pesa
 
-            # Se calcula el momento del antebrazo y se lo agrega al csv
-            momento_antebrazo = (
-                MASA_ANTEBRAZO
-                * GRAVEDAD
-                * math.sin(
-                    angulo_entre_vectores(
-                        (
-                            results.pose_landmarks.landmark[
-                                mp_pose.PoseLandmark.LEFT_ELBOW
-                            ].x,
-                            results.pose_landmarks.landmark[
-                                mp_pose.PoseLandmark.LEFT_ELBOW
-                            ].y,
-                        ),
-                        (
-                            results.pose_landmarks.landmark[
-                                mp_pose.PoseLandmark.LEFT_WRIST
-                            ].x,
-                            results.pose_landmarks.landmark[
-                                mp_pose.PoseLandmark.LEFT_WRIST
-                            ].y,
-                        ),
-                        (
-                            results.pose_landmarks.landmark[
-                                mp_pose.PoseLandmark.LEFT_ELBOW
-                            ].x,
-                            1,
-                        ),
-                    )
-                )
-            )
-            pose_row_cartesian["Momento_antebrazo"] = momento_antebrazo
             pose_row_cartesian["Contraccion_bicep"] = (
                 calcular_tamano_bicep_con_contraccion(pose_row_cartesian["Angulo"])
             )
+            
+            # Calcular la distancia recorrida por la pesa (muñeca) desde el frame anterior
+            if previous_wrist_x is not None and previous_wrist_y is not None:
+                distancia_recorrida = math.sqrt(
+                    (wrist_x - previous_wrist_x)**2 + (wrist_y - previous_wrist_y)**2
+                )
+                pose_row_cartesian["Distancia_recorrida(m)"] = distancia_recorrida
+            else:
+                pose_row_cartesian["Distancia_recorrida(m)"] = 0
 
+            previous_wrist_x = wrist_x
+            previous_wrist_y = wrist_y
+            
         else:
             for landmark in landmarks_of_interest:
                 pose_row_cartesian[landmark.name + "_x(m)"] = None
                 pose_row_cartesian[landmark.name + "_y(m)"] = None
             pose_row_cartesian["Angulo"] = None
+            pose_row_cartesian["Velocidad_angular"] = None
             pose_row_cartesian["Momento_pesa"] = None
-            pose_row_cartesian["Momento_antebrazo"] = None
+            pose_row_cartesian["Distancia_recorrida(m)"] = None
 
         # Contador de repeticiones
         if previous_Y is not None:
@@ -289,6 +278,9 @@ def track_pose(video_path, peso_mancuerna):
     pose.close()
     video_writer.release()
     cap.release()
+
+    # Suavizar la columna "Angulo"
+    pose_data_cartesian["Angulo"] = uniform_filter1d(pose_data_cartesian["Angulo"].dropna(), size=10)
 
     # Guardar los DataFrames como archivos CSV
     pose_data_cartesian.to_csv(OUTPUT_CSV_PATH, index=False)
@@ -319,21 +311,23 @@ def angulo_entre_vectores(codo_pos, muneca_pos, hombro_pos):
 
 def calcularFuerzaBicep(dataframe, masa_pesa):
     # Calcular inercias
-    inercia_antebrazo = (MASA_ANTEBRAZO * (LARGO_ANTEBRAZO / 2) ** 2) / 12
-    inercia_pesa = (masa_pesa * LARGO_ANTEBRAZO**2) / 12
-
+    # La fórmula anterior es esta inercia_pesa = (masa_pesa * LARGO_ANTEBRAZO**2) / 12,
+    # la cual es con el eje de rotacion (codo) ubicado en el centro de la varilla, no en un extremo
+    # La cambie por la siguiente:
+    # A= Inercia varilla delgada con el eje de rotacion en un extremo (codo)= (1/3) * MASA_ANTEBRAZO * LARGO_ANTEBRAZO ** 2
+    # B= Partícula de masa M a una distancia R del eje de rotación = M * R**2= MASA_PESA * LARGO_ANTEBRAZO ** 2
+    # Luego Inercia_total = A+B = ((MASA_ANTEBRAZO/3) + masa_pesa) * (LARGO_ANTEBRAZO ** 2)
+    inercia_total = ((MASA_ANTEBRAZO/3) + masa_pesa) * (LARGO_ANTEBRAZO ** 2)
+    
     # Calcular suma de momentos
-    dataframe["suma_momentos"] = (inercia_antebrazo + inercia_pesa) * dataframe[
-        "Aceleracion_angular"
-    ]
-    dataframe["Fuerza_bicep"] = -(
+    dataframe["suma_momentos"] = inercia_total * dataframe["Aceleracion_angular"]
+    dataframe["Fuerza_bicep"] = abs(-(
         (
             dataframe["suma_momentos"]
             - dataframe["Momento_pesa"]
-            - dataframe["Momento_antebrazo"]
         )
         / (RADIO_BICEP)
-    )
+    ))
 
 
 def calcular_tamano_bicep_con_contraccion(angulo):
@@ -361,9 +355,10 @@ def calcular_tamano_bicep_con_contraccion(angulo):
 
 
 # Se calcula el trabajo del bicep en base a la fuerza, la distancia recorrida y el angulo
+# Dado que la velocidad es tangente a la trayectoria y la fuerza del bíceps es perpendicular al antebrazo, el ángulo
+# es 0, luego cos(0)=1
 def calcularTrabajoBicep(dataframe):
-    dataframe["Trabajo_bicep"] = (
+    dataframe["Trabajo_Fuerza_bicep"] = (
         dataframe["Fuerza_bicep"]
-        * dataframe["Distancia_recorrida"]
-        * np.cos(dataframe["Angulo"])
+        * dataframe["Distancia_recorrida(m)"]
     )

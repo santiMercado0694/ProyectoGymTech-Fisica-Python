@@ -181,6 +181,7 @@ class VideoPlayerApp:
             "Velocidad Angular",
             "Aceleracion Angular",
             "Fuerza Bicep",
+            "Trabajo Bicep",
             "Contraccion Bicep",
             "Energia cinetica",
             "Energia potencial",
@@ -208,6 +209,7 @@ class VideoPlayerApp:
             "Velocidad Angular": "resultados\\graficos\\velocidad_angular.png",
             "Aceleracion Angular": "resultados\\graficos\\aceleracion_angular.png",
             "Fuerza Bicep": "resultados\\graficos\\fuerza_bicep.png",
+            "Trabajo Bicep": "resultados\\graficos\\trabajo_bicep.png",
             "Contraccion Bicep": "resultados\\graficos\\contraccion_bicep.png",
             "Energia cinetica": "resultados\\graficos\\energia_cinetica.png",
             "Energia potencial": "resultados\\graficos\\energia_potencial.png",
@@ -448,6 +450,9 @@ class VideoPlayerApp:
 
         # Calcula la fuerza del bicep
         srcCalculadora.calcularFuerzaBicep(dataframe, float(self.masa_entry.get()))
+        
+        # Calcula el trabajo de la fuerza del bicep
+        srcCalculadora.calcularTrabajoBicep(dataframe)
 
         # Eliminar filas con valores NaN
         dataframe.dropna(inplace=True)
@@ -463,6 +468,7 @@ class VideoPlayerApp:
             dataframe["Velocidad_angular"],
             dataframe["Aceleracion_angular"],
             dataframe["Fuerza_bicep"],
+            dataframe["Trabajo_Fuerza_bicep"],
             dataframe["Contraccion_bicep"],
             dataframe["Energia_cinetica"],
             dataframe["Energia_potencial"],
@@ -475,6 +481,7 @@ class VideoPlayerApp:
             "Velocidad Angular",
             "Aceleracion Angular",
             "Fuerza Bicep",
+            "Trabajo Bicep",
             "Contraccion Bicep",
             "Energia cinetica",
             "Energia potencial",
@@ -487,6 +494,7 @@ class VideoPlayerApp:
             "rad/seg",
             "rad/seg^2",
             "Newton",
+            "J",
             "m",
             "J",
             "J",
