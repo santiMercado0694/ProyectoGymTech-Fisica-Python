@@ -404,7 +404,6 @@ class VideoPlayerApp:
 
     def calcularVelocidadAceleracion(self):
         dataframe = pd.read_csv("resultados/documents/data.csv", index_col=[0])
-        inercia_pesa = (1 * 0.3**2) / 12
         # Eliminar filas con valores NaN
         dataframe.dropna(inplace=True)
 

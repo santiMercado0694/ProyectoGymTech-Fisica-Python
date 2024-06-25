@@ -95,7 +95,7 @@ def dibujar_landarmks(image, results):
     )
 
 # Funcion que calcula el momento de la pesa y se lo agrega al CSV
-def calcular_momento_pesa(pesa_mancuerna, results):
+def calcular_momento_pesa(pose_row_cartesian, pesa_mancuerna, results):
     momento_de_la_pesa = (
         LARGO_ANTEBRAZO
         * pesa_mancuerna
@@ -115,10 +115,9 @@ def calcular_momento_pesa(pesa_mancuerna, results):
                     1,
                 ),
             )
-        )
+        )   
     )
-
-    return momento_de_la_pesa
+    pose_row_cartesian["Momento_pesa"] = momento_de_la_pesa
 
 #Funcion para mostrar los datos en video
 def mostrar_datos_en_video(
@@ -343,8 +342,7 @@ def calcular_calorias(calorias_quemadas, calorias_quemadas_dif, pose_data_cartes
     return calorias_quemadas, calorias_quemadas_dif
 
 # Funcion para cargar los datos del trackeo al CSV
-def cargar_datos_al_csv(pose_data_cartesian, momento_pesa, masa_pesa):
-    pose_data_cartesian["Momento_pesa"] = momento_pesa
+def cargar_datos_al_csv(pose_data_cartesian, masa_pesa):
     pose_data_cartesian["dif_angular"] = pose_data_cartesian["Angulo"].diff()
     pose_data_cartesian["dif_temporal"] = pose_data_cartesian["tiempo(seg)"].diff()
     pose_data_cartesian["Velocidad_angular"] = abs(
@@ -483,7 +481,8 @@ def track_pose(video_path, peso_mancuerna):
             )
 
             # Se calcula el momento de la pesa y se lo agrega al csv
-            momento_pesa = calcular_momento_pesa(masa_pesa, results)
+            
+            calcular_momento_pesa(pose_row_cartesian, masa_pesa, results)
 
         else:
             recolectar_datos_de_la_pose_no_results(pose_row_cartesian, landmarks_of_interest)
@@ -498,7 +497,7 @@ def track_pose(video_path, peso_mancuerna):
             [pose_data_cartesian, pd.DataFrame([pose_row_cartesian])], ignore_index=True
         )
 
-        cargar_datos_al_csv(pose_data_cartesian, momento_pesa, masa_pesa)
+        cargar_datos_al_csv(pose_data_cartesian, masa_pesa)
 
         #Actualizo el Frame del video
         FRAME_NUMBER += 1
@@ -507,7 +506,7 @@ def track_pose(video_path, peso_mancuerna):
         calorias_quemadas, calorias_quemadas_dif = calcular_calorias(calorias_quemadas, calorias_quemadas_dif, pose_data_cartesian)
 
         #Suavizo los graficos
-        pose_data_cartesian = suavizar_dataframe(pose_data_cartesian, max_window_length=11, polyorder=2)
+        pose_data_cartesian = suavizar_dataframe(pose_data_cartesian, max_window_length=5, polyorder=2)
 
     pose.close()
     video_writer.release()
