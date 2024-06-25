@@ -6,6 +6,7 @@ import mediapipe as mp
 from scipy.ndimage import uniform_filter1d  # Importar para suavizado
 from scipy.signal import savgol_filter
 
+#CONSTANTES
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
 video_ready_callback = None
@@ -14,23 +15,288 @@ MASA_ANTEBRAZO = 1.8
 RADIO_BICEP = 0.06
 GRAVEDAD = 9.81
 
-def track_pose(video_path, peso_mancuerna):
-    VIDEO_PATH = video_path
-    OUTPUT_VIDEO_PATH = "resultados/video/tracked_video.mp4"
-    OUTPUT_CSV_PATH = "resultados/documents/data.csv"
-    FPS = 30
-    masa_pesa = peso_mancuerna
+# Metodo auxiliar de angulo_entre_vectores que aplica a = arcos ( (V1 * V2) / ( ||V1|| * ||V2|| ) )
+def calcular_angulo(vector1, vector2):
+    producto_punto = vector1[0] * vector2[0] + vector1[1] * vector2[1]
+    magnitud1 = math.sqrt(vector1[0] ** 2 + vector1[1] ** 2)
+    magnitud2 = math.sqrt(vector2[0] ** 2 + vector2[1] ** 2)
+    cos_theta = producto_punto / (magnitud1 * magnitud2)
+    angulo_rad = math.acos(cos_theta)
+    return angulo_rad
 
-    cap = cv2.VideoCapture(VIDEO_PATH)
 
-    # Definir los landmarks de interés
-    landmarks_of_interest = [
-        mp_pose.PoseLandmark.LEFT_SHOULDER,
-        mp_pose.PoseLandmark.LEFT_ELBOW,
-        mp_pose.PoseLandmark.LEFT_WRIST,
-    ]
+# Se calcula el angulo en rads, en base a tres puntos (x,y) siendo el 1ro la interseccion
+def angulo_entre_vectores(codo_pos, muneca_pos, hombro_pos):
+    vector_codo_muneca = (muneca_pos[0] - codo_pos[0], muneca_pos[1] - codo_pos[1])
+    vector_codo_hombro = (hombro_pos[0] - codo_pos[0], hombro_pos[1] - codo_pos[1])
+    angulo = calcular_angulo(vector_codo_muneca, vector_codo_hombro)
+    return angulo
 
-    # Crear el DataFrame para almacenar los datos de la pose (coordenadas cartesianas)
+
+# Calcular inercias
+# La fórmula anterior es esta inercia_pesa = (masa_pesa * LARGO_ANTEBRAZO**2) / 12,
+# la cual es con el eje de rotacion (codo) ubicado en el centro de la varilla, no en un extremo
+# La cambie por la siguiente:
+# A= Inercia varilla delgada con el eje de rotacion en un extremo (codo)= (1/3) * MASA_ANTEBRAZO * LARGO_ANTEBRAZO ** 2
+# B= Partícula de masa M a una distancia R del eje de rotación = M * R**2= MASA_PESA * LARGO_ANTEBRAZO ** 2
+# Luego Inercia_total = A+B = ((MASA_ANTEBRAZO/3) + masa_pesa) * (LARGO_ANTEBRAZO ** 2)
+def calcularFuerzaBicep(dataframe, masa_pesa):
+    inercia_total = ((MASA_ANTEBRAZO / 3) + masa_pesa) * (LARGO_ANTEBRAZO**2)
+
+    # Calcular suma de momentos
+    dataframe["suma_momentos"] = inercia_total * dataframe["Aceleracion_angular"]
+    dataframe["Fuerza_bicep"] = abs(
+        -((dataframe["suma_momentos"] - dataframe["Momento_pesa"]) / (RADIO_BICEP))
+    )
+
+
+# Se calcula el trabajo del bicep en base a la fuerza, la distancia recorrida y el angulo
+# Dado que la velocidad es tangente a la trayectoria y la fuerza del bíceps es perpendicular al antebrazo, el ángulo
+# es 0, luego cos(0)=1
+def calcularTrabajoBicep(dataframe):
+    dataframe["Trabajo_bicep"] = (
+        dataframe["Fuerza_bicep"] * dataframe["Distancia_recorrida(m)"]
+    )
+
+#Funcion para suvizar los graficos
+def suavizar_dataframe(df, max_window_length=5, polyorder=2):
+    columnas_numericas = df.select_dtypes(include=[float, int]).columns
+    for columna in columnas_numericas:
+        datos_columna = df[columna].fillna(0)
+        # Asegurarse de que window_length no sea mayor que la longitud de la columna y sea un número impar
+        window_length = min(
+            max_window_length,
+            (
+                len(datos_columna)
+                if len(datos_columna) % 2 != 0
+                else len(datos_columna) - 1
+            ),
+        )
+        if window_length < polyorder + 2:
+            window_length = polyorder + 2
+            if window_length % 2 == 0:
+                window_length += 1
+        # Aplicar el filtro de Savitzky-Golay solo si la columna tiene datos suficientes
+        if len(datos_columna) > window_length:
+            df[columna] = savgol_filter(datos_columna, window_length, polyorder)
+    return df
+
+
+# Se calcula el momento de la pesa y se lo agrega al csv
+def calcular_momento_pesa(pesa_mancuerna, results):
+    momento_de_la_pesa = (
+        LARGO_ANTEBRAZO
+        * pesa_mancuerna
+        * GRAVEDAD
+        * math.sin(
+            angulo_entre_vectores(
+                (
+                    results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].x,
+                    results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].y,
+                ),
+                (
+                    results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].x,
+                    results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].y,
+                ),
+                (
+                    results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].x,
+                    1,
+                ),
+            )
+        )
+    )
+
+    return momento_de_la_pesa
+
+#Funcion para mostrar los datos en video
+def mostrar_datos_en_video(
+    FRAME_NUMERO,
+    CAP,
+    imagen,
+    tiempo_en_segundos,
+    repeticiones_ejercicio,
+    calorias_quemadas_ej,
+    calorias_quemadas_ej_dif,
+):
+    cv2.putText(
+        imagen,
+        f"Frame: {FRAME_NUMERO}",
+        (50, 50),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1,
+        (0, 0, 0),
+        12,
+        cv2.LINE_AA,
+    )
+    cv2.putText(
+        imagen,
+        f"Segundo: {tiempo_en_segundos:.2f}",
+        (50, 100),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1,
+        (0, 0, 0),
+        12,
+        cv2.LINE_AA,
+    )
+    cv2.putText(
+        imagen,
+        f"Repeticiones: {repeticiones_ejercicio}",
+        (50, int(CAP.get(4)) - 50),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1,
+        (0, 0, 0),
+        12,
+        cv2.LINE_AA,
+    )
+    cv2.putText(
+        imagen,
+        f"Calorias quemadas: {calorias_quemadas_ej}",
+        (50, int(CAP.get(4)) - 100),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1,
+        (0, 0, 0),
+        12,
+        cv2.LINE_AA,
+    )
+    cv2.putText(
+        imagen,
+        f"Calorias quemadas dif: {calorias_quemadas_ej_dif}",
+        (50, int(CAP.get(4)) - 150),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1,
+        (0, 0, 0),
+        12,
+        cv2.LINE_AA,
+    )
+
+    # Datos en video
+    cv2.putText(
+        imagen,
+        f"Frame: {FRAME_NUMERO}",
+        (50, 50),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1,
+        (255, 255, 255),
+        3,
+        cv2.LINE_AA,
+    )
+    cv2.putText(
+        imagen,
+        f"Segundo: {tiempo_en_segundos:.2f}",
+        (50, 100),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1,
+        (255, 255, 255),
+        3,
+        cv2.LINE_AA,
+    )
+    cv2.putText(
+        imagen,
+        f"Repeticiones: {repeticiones_ejercicio}",
+        (50, int(CAP.get(4)) - 50),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1,
+        (255, 255, 255),
+        3,
+        cv2.LINE_AA,
+    )
+    cv2.putText(
+        imagen,
+        f"Calorias quemadas: {calorias_quemadas_ej}",
+        (50, int(CAP.get(4)) - 100),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1,
+        (255, 255, 255),
+        3,
+        cv2.LINE_AA,
+    )
+    cv2.putText(
+        imagen,
+        f"Calorias quemadas dif: {calorias_quemadas_ej_dif}",
+        (50, int(CAP.get(4)) - 150),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1,
+        (255, 255, 255),
+        3,
+        cv2.LINE_AA,
+    )
+
+# Funcion para recolectar los datos de la pose (coordenadas cartesianas) en el DataFrame
+def recolectar_datos_de_la_pose(
+    pose_row_cartesian,
+    landmarks_of_interest,
+    results,
+    previous_wrist_x,
+    previous_wrist_y,
+):
+    elbow_x = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].x
+    elbow_y = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].y
+
+    # Obtener las coordenadas de la muñeca sin modificar
+    pose_row_cartesian["Left_Wrist_x(m)_Sin_Modificar"] = (
+        results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].x
+    )
+    pose_row_cartesian["Left_Wrist_y(m)_Sin_Modificar"] = (
+        results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].y
+    )
+
+    for landmark in landmarks_of_interest:
+        # Calcular las coordenadas relativas al codo y pasarlas a metros
+        rel_x = (results.pose_landmarks.landmark[landmark].x - elbow_x) * 1.58
+        rel_y = (results.pose_landmarks.landmark[landmark].y - elbow_y) * -1.58
+
+        pose_row_cartesian[landmark.name + "_x(m)"] = rel_x
+        pose_row_cartesian[landmark.name + "_y(m)"] = rel_y
+
+    # Obtener las coordenadas relativas de la muñeca
+    wrist_x = pose_row_cartesian["LEFT_WRIST_x(m)"]
+    wrist_y = pose_row_cartesian["LEFT_WRIST_y(m)"]
+
+    # Se calcula y agrega al csv el angulo del brazo en ese frame
+    pose_row_cartesian["Angulo"] = angulo_entre_vectores(
+        (
+            results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].x,
+            results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].y,
+        ),
+        (
+            results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].x,
+            results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].y,
+        ),
+        (
+            results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER].x,
+            results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_SHOULDER].y,
+        ),
+    )
+
+    # Calcular la distancia recorrida por la pesa (muñeca) desde el frame anterior
+    if previous_wrist_x is not None and previous_wrist_y is not None:
+        distancia_recorrida = math.sqrt(
+            (wrist_x - previous_wrist_x) ** 2 + (wrist_y - previous_wrist_y) ** 2
+        )
+        pose_row_cartesian["Distancia_recorrida(m)"] = distancia_recorrida
+    else:
+        pose_row_cartesian["Distancia_recorrida(m)"] = 0
+
+    previous_wrist_x = wrist_x
+    previous_wrist_y = wrist_y
+
+    return previous_wrist_x, previous_wrist_y
+
+# Funcion para calcular la cantidad de repeticiones que hace el usuario
+def calcular_repeticiones(previous_Y, pose_row_cartesian, repeticiones):
+    if previous_Y is not None:
+        current_Y = pose_row_cartesian[mp_pose.PoseLandmark.LEFT_WRIST.name + "_y(m)"]
+        if current_Y is not None and previous_Y is not None:
+            if previous_Y < 0 and current_Y > 0:
+                repeticiones += 1
+            previous_Y = current_Y
+    else:
+        previous_Y = pose_row_cartesian[mp_pose.PoseLandmark.LEFT_WRIST.name + "_y(m)"]
+
+    return repeticiones, previous_Y
+
+# Funcion para crear el DataFrame para almacenar los datos de la pose (coordenadas cartesianas)
+def crear_dataframe(landmarks_of_interest):
     columns_cartesian = ["frame_number", "tiempo(seg)", "repeticion"]
     for landmark in landmarks_of_interest:
         columns_cartesian.append(landmark.name + "_x(m)")
@@ -41,14 +307,84 @@ def track_pose(video_path, peso_mancuerna):
     columns_cartesian.append("Distancia_recorrida(m)")
     pose_data_cartesian = pd.DataFrame(columns=columns_cartesian)
 
-    pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
-    video_writer = cv2.VideoWriter(
-        OUTPUT_VIDEO_PATH,
-        cv2.VideoWriter_fourcc(*"mp4v"),
-        FPS,
-        (int(cap.get(3)), int(cap.get(4))),
+    return pose_data_cartesian
+
+# Funcion para calcular la cantidad de calorias quemadas a lo largo del ejercicio de biceps
+def calcular_calorias(calorias_quemadas, calorias_quemadas_dif, pose_data_cartesian):
+    calorias_quemadas = round(
+        pose_data_cartesian["Trabajo_bicep_positivo"].sum() / 4184, 2
+    )
+    calorias_quemadas_dif = round(
+        pose_data_cartesian["Trabajo_bicep_dif_positivo"].sum() / 4184, 2
     )
 
+    return calorias_quemadas, calorias_quemadas_dif
+
+# Funcion para cargar los datos del trackeo al CSV
+def cargar_datos_al_csv(pose_data_cartesian, momento_pesa, masa_pesa):
+    pose_data_cartesian["Momento_pesa"] = momento_pesa
+    pose_data_cartesian["dif_angular"] = pose_data_cartesian["Angulo"].diff()
+    pose_data_cartesian["dif_temporal"] = pose_data_cartesian["tiempo(seg)"].diff()
+    pose_data_cartesian["Velocidad_angular"] = abs(
+        pose_data_cartesian["dif_angular"] / pose_data_cartesian["dif_temporal"]
+    )
+    pose_data_cartesian["dif_velocidad_angular"] = pose_data_cartesian[
+        "Velocidad_angular"
+    ].diff()
+    pose_data_cartesian["Aceleracion_angular"] = abs(
+        pose_data_cartesian["dif_velocidad_angular"]
+        / pose_data_cartesian["dif_temporal"]
+    )
+    pose_data_cartesian["dif_x"] = pose_data_cartesian["LEFT_WRIST_x(m)"].diff()
+    pose_data_cartesian["dif_y"] = pose_data_cartesian["LEFT_WRIST_y(m)"].diff()
+    pose_data_cartesian["velocidad_munieca"] = (
+        np.sqrt(
+            pose_data_cartesian["dif_x"] ** 2 + pose_data_cartesian["dif_y"] ** 2
+        )
+        / pose_data_cartesian["dif_temporal"]
+    )
+    pose_data_cartesian["Energia_cinetica"] = (0.5 * masa_pesa) * (
+        (pose_data_cartesian["velocidad_munieca"]) ** 2
+    )
+    pose_data_cartesian["Energia_potencial"] = (
+        (masa_pesa)
+        * 9.8
+        * (
+            pose_data_cartesian["Left_Wrist_y(m)_Sin_Modificar"]
+            - pose_data_cartesian[
+                "Left_Wrist_y(m)_Sin_Modificar"
+            ].first_valid_index()
+        )
+    )
+
+    calcularFuerzaBicep(pose_data_cartesian, masa_pesa)
+    pose_data_cartesian["Energia_Mecanica"] = (
+        pose_data_cartesian["Energia_cinetica"]
+        + pose_data_cartesian["Energia_potencial"]
+    )
+
+    pose_data_cartesian["Trabajo_bicep"] = (
+        pose_data_cartesian["Fuerza_bicep"]
+        * pose_data_cartesian["Distancia_recorrida(m)"]
+    )
+    pose_data_cartesian["Trabajo_bicep_dif"] = pose_data_cartesian[
+        "Energia_Mecanica"
+    ].diff()
+
+    pose_data_cartesian["Trabajo_bicep_dif_positivo"] = pose_data_cartesian[
+        "Trabajo_bicep_dif"
+    ].apply(lambda x: x if x > 0 else 0)
+    pose_data_cartesian["Trabajo_bicep_positivo"] = pose_data_cartesian[
+        "Trabajo_bicep"
+    ].apply(lambda x: x if x > 0 else 0)
+
+
+# Metodo Principal
+def track_pose(video_path, peso_mancuerna):
+    VIDEO_PATH = video_path
+    OUTPUT_VIDEO_PATH = "resultados/video/tracked_video.mp4"
+    OUTPUT_CSV_PATH = "resultados/documents/data.csv"
+    FPS = 30
     FRAME_NUMBER = 0
     repeticiones = 0
     calorias_quemadas = 0
@@ -56,6 +392,26 @@ def track_pose(video_path, peso_mancuerna):
     previous_Y = None
     previous_wrist_x = None
     previous_wrist_y = None
+    masa_pesa = peso_mancuerna
+    cap = cv2.VideoCapture(VIDEO_PATH)
+
+    # Definir los landmarks de interés
+    landmarks_of_interest = [
+        mp_pose.PoseLandmark.LEFT_SHOULDER,
+        mp_pose.PoseLandmark.LEFT_ELBOW,
+        mp_pose.PoseLandmark.LEFT_WRIST,
+    ]
+
+    # Crear el DataFrame para almacenar los datos de la pose (coordenadas cartesianas)
+    pose_data_cartesian = crear_dataframe(landmarks_of_interest)
+
+    pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
+    video_writer = cv2.VideoWriter(
+        OUTPUT_VIDEO_PATH,
+        cv2.VideoWriter_fourcc(*"mp4v"),
+        FPS,
+        (int(cap.get(3)), int(cap.get(4))),
+    )
 
     while cap.isOpened():
         ret, frame = cap.read()
@@ -81,210 +437,40 @@ def track_pose(video_path, peso_mancuerna):
 
         tiempo_segundos = FRAME_NUMBER / FPS
 
-        # Contorno de los datos en video
-        cv2.putText(
-            image,
-            f"Frame: {FRAME_NUMBER}",
-            (50, 50),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            (0, 0, 0),
-            12,
-            cv2.LINE_AA,
-        )
-        cv2.putText(
-            image,
-            f"Segundo: {tiempo_segundos:.2f}",
-            (50, 100),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            (0, 0, 0),
-            12,
-            cv2.LINE_AA,
-        )
-        cv2.putText(
-            image,
-            f"Repeticiones: {repeticiones}",
-            (50, int(cap.get(4)) - 50),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            (0, 0, 0),
-            12,
-            cv2.LINE_AA,
-        )
-        cv2.putText(
-            image,
-            f"Calorias quemadas: {calorias_quemadas}",
-            (50, int(cap.get(4)) - 100),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            (0, 0, 0),
-            12,
-            cv2.LINE_AA,
-        )
-        cv2.putText(
-            image,
-            f"Calorias quemadas dif: {calorias_quemadas_dif}",
-            (50, int(cap.get(4)) - 150),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            (0, 0, 0),
-            12,
-            cv2.LINE_AA,
-        )
+        pose_row_cartesian = {
+            "frame_number": FRAME_NUMBER,
+            "tiempo(seg)": tiempo_segundos,
+            "repeticion": repeticiones,
+        }
 
-        # Datos en video
-        cv2.putText(
+        # Contorno de los datos en video
+        mostrar_datos_en_video(
+            FRAME_NUMBER,
+            cap,
             image,
-            f"Frame: {FRAME_NUMBER}",
-            (50, 50),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            (255, 255, 255),
-            3,
-            cv2.LINE_AA,
-        )
-        cv2.putText(
-            image,
-            f"Segundo: {tiempo_segundos:.2f}",
-            (50, 100),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            (255, 255, 255),
-            3,
-            cv2.LINE_AA,
-        )
-        cv2.putText(
-            image,
-            f"Repeticiones: {repeticiones}",
-            (50, int(cap.get(4)) - 50),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            (255, 255, 255),
-            3,
-            cv2.LINE_AA,
-        )
-        cv2.putText(
-            image,
-            f"Calorias quemadas: {calorias_quemadas}",
-            (50, int(cap.get(4)) - 100),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            (255, 255, 255),
-            3,
-            cv2.LINE_AA,
-        )
-        cv2.putText(
-            image,
-            f"Calorias quemadas dif: {calorias_quemadas_dif}",
-            (50, int(cap.get(4)) - 150),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            (255, 255, 255),
-            3,
-            cv2.LINE_AA,
+            tiempo_segundos,
+            repeticiones,
+            calorias_quemadas,
+            calorias_quemadas_dif,
         )
 
         # Guardar el cuadro procesado en el video de salida
         video_writer.write(cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
 
         # Recolectar los datos de la pose (coordenadas cartesianas) en el DataFrame
-        pose_row_cartesian = {
-            "frame_number": FRAME_NUMBER,
-            "tiempo(seg)": tiempo_segundos,
-            "repeticion": repeticiones,
-        }
         if results.pose_landmarks:
-            # Obtener las coordenadas del codo
-            elbow_x = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].x
-            elbow_y = results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].y
-            
-            # Obtener las coordenadas de la muñeca sin modificar
-            pose_row_cartesian["Left_Wrist_x(m)_Sin_Modificar"] = (
-                results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].x
-            )
-            pose_row_cartesian["Left_Wrist_y(m)_Sin_Modificar"] = (
-                results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].y
-            )
 
-            for landmark in landmarks_of_interest:
-                # Calcular las coordenadas relativas al codo y pasarlas a metros
-                rel_x = (results.pose_landmarks.landmark[landmark].x - elbow_x) * 1.58
-                rel_y = (results.pose_landmarks.landmark[landmark].y - elbow_y) * -1.58
-
-                pose_row_cartesian[landmark.name + "_x(m)"] = rel_x
-                pose_row_cartesian[landmark.name + "_y(m)"] = rel_y
-            
-            # Obtener las coordenadas relativas de la muñeca
-            wrist_x = pose_row_cartesian["LEFT_WRIST_x(m)"]
-            wrist_y = pose_row_cartesian["LEFT_WRIST_y(m)"]
-            
-            # Se calcula y agrega al csv el angulo del brazo en ese frame
-            pose_row_cartesian["Angulo"] = angulo_entre_vectores(
-                (
-                    results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].x,
-                    results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].y,
-                ),
-                (
-                    results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].x,
-                    results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].y,
-                ),
-                (
-                    results.pose_landmarks.landmark[
-                        mp_pose.PoseLandmark.LEFT_SHOULDER
-                    ].x,
-                    results.pose_landmarks.landmark[
-                        mp_pose.PoseLandmark.LEFT_SHOULDER
-                    ].y,
-                ),
+            previous_wrist_x, previous_wrist_y = recolectar_datos_de_la_pose(
+                pose_row_cartesian,
+                landmarks_of_interest,
+                results,
+                previous_wrist_x,
+                previous_wrist_y,
             )
 
             # Se calcula el momento de la pesa y se lo agrega al csv
-            momento_pesa = (
-                LARGO_ANTEBRAZO
-                * masa_pesa
-                * GRAVEDAD
-                * math.sin(
-                    angulo_entre_vectores(
-                        (
-                            results.pose_landmarks.landmark[
-                                mp_pose.PoseLandmark.LEFT_ELBOW
-                            ].x,
-                            results.pose_landmarks.landmark[
-                                mp_pose.PoseLandmark.LEFT_ELBOW
-                            ].y,
-                        ),
-                        (
-                            results.pose_landmarks.landmark[
-                                mp_pose.PoseLandmark.LEFT_WRIST
-                            ].x,
-                            results.pose_landmarks.landmark[
-                                mp_pose.PoseLandmark.LEFT_WRIST
-                            ].y,
-                        ),
-                        (
-                            results.pose_landmarks.landmark[
-                                mp_pose.PoseLandmark.LEFT_ELBOW
-                            ].x,
-                            1,
-                        ),
-                    )
-                )
-            )
-            
+            momento_pesa = calcular_momento_pesa(masa_pesa, results)
 
-            # Calcular la distancia recorrida por la pesa (muñeca) desde el frame anterior
-            if previous_wrist_x is not None and previous_wrist_y is not None:
-                distancia_recorrida = math.sqrt(
-                    (wrist_x - previous_wrist_x)**2 + (wrist_y - previous_wrist_y)**2
-                )
-                pose_row_cartesian["Distancia_recorrida(m)"] = distancia_recorrida
-            else:
-                pose_row_cartesian["Distancia_recorrida(m)"] = 0
-
-            previous_wrist_x = wrist_x
-            previous_wrist_y = wrist_y
-            
         else:
             for landmark in landmarks_of_interest:
                 pose_row_cartesian[landmark.name + "_x(m)"] = None
@@ -293,63 +479,31 @@ def track_pose(video_path, peso_mancuerna):
             pose_row_cartesian["Velocidad_angular"] = None
             pose_row_cartesian["Momento_pesa"] = None
             pose_row_cartesian["Distancia_recorrida(m)"] = None
-         
-   
-        
-        # Contador de repeticiones
-        if previous_Y is not None:
-            current_Y = pose_row_cartesian[
-                mp_pose.PoseLandmark.LEFT_WRIST.name + "_y(m)"
-            ]
-            if current_Y is not None and previous_Y is not None:
-                if previous_Y < 0 and current_Y > 0:
-                    repeticiones += 1
-                previous_Y = current_Y
-        else:
-            previous_Y = pose_row_cartesian[
-                mp_pose.PoseLandmark.LEFT_WRIST.name + "_y(m)"
-            ]
 
+        # Contador de repeticiones
+        repeticiones, previous_Y = calcular_repeticiones(
+            previous_Y, pose_row_cartesian, repeticiones
+        )
+
+        #Cargar los datos del trackeo al CSV
         pose_data_cartesian = pd.concat(
             [pose_data_cartesian, pd.DataFrame([pose_row_cartesian])], ignore_index=True
         )
 
+        cargar_datos_al_csv(pose_data_cartesian, momento_pesa, masa_pesa)
 
-        
-        pose_data_cartesian["Momento_pesa"] = momento_pesa
-        pose_data_cartesian["dif_angular"] = pose_data_cartesian["Angulo"].diff()
-        pose_data_cartesian["dif_temporal"] = pose_data_cartesian["tiempo(seg)"].diff()
-        pose_data_cartesian["Velocidad_angular"] = abs(pose_data_cartesian["dif_angular"] / pose_data_cartesian["dif_temporal"])
-        pose_data_cartesian["dif_velocidad_angular"] = pose_data_cartesian["Velocidad_angular"].diff() 
-        pose_data_cartesian["Aceleracion_angular"] = abs(pose_data_cartesian["dif_velocidad_angular"] / pose_data_cartesian["dif_temporal"])
-        pose_data_cartesian["dif_x"] = pose_data_cartesian["LEFT_WRIST_x(m)"].diff()
-        pose_data_cartesian["dif_y"] = pose_data_cartesian["LEFT_WRIST_y(m)"].diff()
-        pose_data_cartesian["velocidad_munieca"] = (np.sqrt(pose_data_cartesian["dif_x"] ** 2 + pose_data_cartesian["dif_y"] ** 2) / pose_data_cartesian["dif_temporal"] )
-        pose_data_cartesian["Energia_cinetica"] = (0.5 * masa_pesa) * ((pose_data_cartesian["velocidad_munieca"]) ** 2)
-        pose_data_cartesian["Energia_potencial"] = (masa_pesa)* 9.8* (pose_data_cartesian["Left_Wrist_y(m)_Sin_Modificar"]-pose_data_cartesian["Left_Wrist_y(m)_Sin_Modificar"].first_valid_index())
-        calcularFuerzaBicep(pose_data_cartesian, masa_pesa)
-        pose_data_cartesian["Energia_Mecanica"] = pose_data_cartesian["Energia_cinetica"] + pose_data_cartesian["Energia_potencial"]
-
-        pose_data_cartesian["Trabajo_bicep"] = (pose_data_cartesian["Fuerza_bicep"]* pose_data_cartesian["Distancia_recorrida(m)"])
-        pose_data_cartesian["Trabajo_bicep_dif"] = pose_data_cartesian["Energia_Mecanica"].diff()
-
-        pose_data_cartesian["Trabajo_bicep_dif_positivo"] = pose_data_cartesian["Trabajo_bicep_dif"].apply(lambda x: x if x > 0 else 0)
-        pose_data_cartesian["Trabajo_bicep_positivo"] = pose_data_cartesian["Trabajo_bicep"].apply(lambda x: x if x > 0 else 0)
-       
-        
+        #Actualizo el Frame del video
         FRAME_NUMBER += 1
 
         # Calcular las calorias quemadas
-        calorias_quemadas = round(pose_data_cartesian["Trabajo_bicep_positivo"].sum() / 4184, 2)
-        calorias_quemadas_dif = round(pose_data_cartesian["Trabajo_bicep_dif_positivo"].sum() / 4184, 2)
-        #pose_data_cartesian = suavizar_dataframe(pose_data_cartesian, max_window_length=11, polyorder=2)
-        
+        calorias_quemadas, calorias_quemadas_dif = calcular_calorias(calorias_quemadas, calorias_quemadas_dif, pose_data_cartesian)
+
+        #Suavizo los graficos
+        pose_data_cartesian = suavizar_dataframe(pose_data_cartesian, max_window_length=11, polyorder=2)
 
     pose.close()
     video_writer.release()
     cap.release()
-
-    
 
     # Guardar los DataFrames como archivos CSV
     pose_data_cartesian.to_csv(OUTPUT_CSV_PATH, index=False)
@@ -358,69 +512,3 @@ def track_pose(video_path, peso_mancuerna):
     print("Datos de la pose (cartesianas) guardados en:", OUTPUT_CSV_PATH)
     if video_ready_callback:
         video_ready_callback()
-
-
-# Metodo auxiliar de angulo_entre_vectores que aplica a = arcos ( (V1 * V2) / ( ||V1|| * ||V2|| ) )
-def calcular_angulo(vector1, vector2):
-    producto_punto = vector1[0] * vector2[0] + vector1[1] * vector2[1]
-    magnitud1 = math.sqrt(vector1[0] ** 2 + vector1[1] ** 2)
-    magnitud2 = math.sqrt(vector2[0] ** 2 + vector2[1] ** 2)
-    cos_theta = producto_punto / (magnitud1 * magnitud2)
-    angulo_rad = math.acos(cos_theta)
-    return angulo_rad
-
-
-# Se calcula el angulo en rads, en base a tres puntos (x,y) siendo el 1ro la interseccion
-def angulo_entre_vectores(codo_pos, muneca_pos, hombro_pos):
-    vector_codo_muneca = (muneca_pos[0] - codo_pos[0], muneca_pos[1] - codo_pos[1])
-    vector_codo_hombro = (hombro_pos[0] - codo_pos[0], hombro_pos[1] - codo_pos[1])
-    angulo = calcular_angulo(vector_codo_muneca, vector_codo_hombro)
-    return angulo
-
-
-def calcularFuerzaBicep(dataframe, masa_pesa):
-    # Calcular inercias
-    # La fórmula anterior es esta inercia_pesa = (masa_pesa * LARGO_ANTEBRAZO**2) / 12,
-    # la cual es con el eje de rotacion (codo) ubicado en el centro de la varilla, no en un extremo
-    # La cambie por la siguiente:
-    # A= Inercia varilla delgada con el eje de rotacion en un extremo (codo)= (1/3) * MASA_ANTEBRAZO * LARGO_ANTEBRAZO ** 2
-    # B= Partícula de masa M a una distancia R del eje de rotación = M * R**2= MASA_PESA * LARGO_ANTEBRAZO ** 2
-    # Luego Inercia_total = A+B = ((MASA_ANTEBRAZO/3) + masa_pesa) * (LARGO_ANTEBRAZO ** 2)
-    inercia_total = ((MASA_ANTEBRAZO/3) + masa_pesa) * (LARGO_ANTEBRAZO ** 2)
-    
-    # Calcular suma de momentos
-    dataframe["suma_momentos"] = inercia_total * dataframe["Aceleracion_angular"]
-    dataframe["Fuerza_bicep"] = abs(-(
-        (
-            dataframe["suma_momentos"]
-            - dataframe["Momento_pesa"]
-        )
-        / (RADIO_BICEP)
-    ))
-
-
-
-# Se calcula el trabajo del bicep en base a la fuerza, la distancia recorrida y el angulo
-# Dado que la velocidad es tangente a la trayectoria y la fuerza del bíceps es perpendicular al antebrazo, el ángulo
-# es 0, luego cos(0)=1
-def calcularTrabajoBicep(dataframe):
-    dataframe["Trabajo_bicep"] = (
-        dataframe["Fuerza_bicep"]
-        * dataframe["Distancia_recorrida(m)"]
-    )
-
-
-def suavizar_dataframe(df, max_window_length=15, polyorder=2):
-    columnas_numericas = df.select_dtypes(include=[float, int]).columns
-    for columna in columnas_numericas:
-            datos_columna = df[columna].fillna(0)
-            # Asegurarse de que window_length no sea mayor que la longitud de la columna y sea un número impar
-            window_length = min(max_window_length, len(datos_columna) if len(datos_columna) % 2 != 0 else len(datos_columna) - 1)
-            if window_length < polyorder + 2:
-                window_length = polyorder + 2
-                if window_length % 2 == 0:
-                    window_length += 1
-            # Aplicar el filtro de Savitzky-Golay solo si la columna tiene datos suficientes
-            if len(datos_columna) > window_length:
-                df[columna] = savgol_filter(datos_columna, window_length, polyorder)
-    return df
