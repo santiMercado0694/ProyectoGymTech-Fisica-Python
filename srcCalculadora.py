@@ -1,9 +1,11 @@
+# -- LIBRERIAS QUE UTILIZAMOS --
+
 import math
 import cv2
 import pandas as pd
 import numpy as np
 import mediapipe as mp
-from scipy.ndimage import uniform_filter1d  # Importar para suavizado
+from scipy.ndimage import uniform_filter1d 
 from scipy.signal import savgol_filter
 
 #CONSTANTES
@@ -15,7 +17,9 @@ MASA_ANTEBRAZO = 1.8
 RADIO_BICEP = 0.06
 GRAVEDAD = 9.81
 
-# Metodo auxiliar de angulo_entre_vectores que aplica a = arcos ( (V1 * V2) / ( ||V1|| * ||V2|| ) )
+# -- FUNCIONES AXULIARES --
+
+# Funcion que calcula el angulo_entre_vectores que aplica a = arcos ( (V1 * V2) / ( ||V1|| * ||V2|| ) )
 def calcular_angulo(vector1, vector2):
     producto_punto = vector1[0] * vector2[0] + vector1[1] * vector2[1]
     magnitud1 = math.sqrt(vector1[0] ** 2 + vector1[1] ** 2)
@@ -24,15 +28,14 @@ def calcular_angulo(vector1, vector2):
     angulo_rad = math.acos(cos_theta)
     return angulo_rad
 
-
-# Se calcula el angulo en rads, en base a tres puntos (x,y) siendo el 1ro la interseccion
+# Funcion que calcula el angulo en rads(radiantes), en base a tres puntos (x,y) siendo el 1ro la interseccion
 def angulo_entre_vectores(codo_pos, muneca_pos, hombro_pos):
     vector_codo_muneca = (muneca_pos[0] - codo_pos[0], muneca_pos[1] - codo_pos[1])
     vector_codo_hombro = (hombro_pos[0] - codo_pos[0], hombro_pos[1] - codo_pos[1])
     angulo = calcular_angulo(vector_codo_muneca, vector_codo_hombro)
     return angulo
 
-
+# Fncion que calcular la fuerza que ejerce el bicep
 # Calcular inercias
 # La fórmula anterior es esta inercia_pesa = (masa_pesa * LARGO_ANTEBRAZO**2) / 12,
 # la cual es con el eje de rotacion (codo) ubicado en el centro de la varilla, no en un extremo
@@ -49,8 +52,7 @@ def calcularFuerzaBicep(dataframe, masa_pesa):
         -((dataframe["suma_momentos"] - dataframe["Momento_pesa"]) / (RADIO_BICEP))
     )
 
-
-# Se calcula el trabajo del bicep en base a la fuerza, la distancia recorrida y el angulo
+# Funcion que calcula el trabajo del bicep en base a la fuerza, la distancia recorrida y el angulo
 # Dado que la velocidad es tangente a la trayectoria y la fuerza del bíceps es perpendicular al antebrazo, el ángulo
 # es 0, luego cos(0)=1
 def calcularTrabajoBicep(dataframe):
@@ -58,7 +60,7 @@ def calcularTrabajoBicep(dataframe):
         dataframe["Fuerza_bicep"] * dataframe["Distancia_recorrida(m)"]
     )
 
-#Funcion para suvizar los graficos
+# Funcion que reliza el suavizado de los graficos
 def suavizar_dataframe(df, max_window_length=5, polyorder=2):
     columnas_numericas = df.select_dtypes(include=[float, int]).columns
     for columna in columnas_numericas:
@@ -81,8 +83,17 @@ def suavizar_dataframe(df, max_window_length=5, polyorder=2):
             df[columna] = savgol_filter(datos_columna, window_length, polyorder)
     return df
 
+# Funcion para dibujar los landmarks de la pose en la imagen
+def dibujar_landarmks(image, results):
+    mp_drawing.draw_landmarks(
+        image,
+        results.pose_landmarks,
+        mp_pose.POSE_CONNECTIONS,
+        mp_drawing.DrawingSpec(color=(245, 117, 66), thickness=2, circle_radius=2),
+        mp_drawing.DrawingSpec(color=(245, 66, 230), thickness=2, circle_radius=2),
+    )
 
-# Se calcula el momento de la pesa y se lo agrega al csv
+# Funcion que calcula el momento de la pesa y se lo agrega al CSV
 def calcular_momento_pesa(pesa_mancuerna, results):
     momento_de_la_pesa = (
         LARGO_ANTEBRAZO
@@ -282,6 +293,16 @@ def recolectar_datos_de_la_pose(
 
     return previous_wrist_x, previous_wrist_y
 
+# Funcion para recolectar los datos de la pose en caso de que no haya ningun resultado
+def recolectar_datos_de_la_pose_no_results(pose_row_cartesian, landmarks_of_interest) :
+    for landmark in landmarks_of_interest:
+        pose_row_cartesian[landmark.name + "_x(m)"] = None
+        pose_row_cartesian[landmark.name + "_y(m)"] = None
+    pose_row_cartesian["Angulo"] = None
+    pose_row_cartesian["Velocidad_angular"] = None
+    pose_row_cartesian["Momento_pesa"] = None
+    pose_row_cartesian["Distancia_recorrida(m)"] = None
+
 # Funcion para calcular la cantidad de repeticiones que hace el usuario
 def calcular_repeticiones(previous_Y, pose_row_cartesian, repeticiones):
     if previous_Y is not None:
@@ -379,7 +400,7 @@ def cargar_datos_al_csv(pose_data_cartesian, momento_pesa, masa_pesa):
     ].apply(lambda x: x if x > 0 else 0)
 
 
-# Metodo Principal
+# Funcion Principal
 def track_pose(video_path, peso_mancuerna):
     VIDEO_PATH = video_path
     OUTPUT_VIDEO_PATH = "resultados/video/tracked_video.mp4"
@@ -422,21 +443,13 @@ def track_pose(video_path, peso_mancuerna):
 
         # Convertir la imagen a RGB
         image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
         # Procesar la imagen con MediaPipe
         results = pose.process(image)
 
         # Dibujar los landmarks de la pose en la imagen
-        mp_drawing.draw_landmarks(
-            image,
-            results.pose_landmarks,
-            mp_pose.POSE_CONNECTIONS,
-            mp_drawing.DrawingSpec(color=(245, 117, 66), thickness=2, circle_radius=2),
-            mp_drawing.DrawingSpec(color=(245, 66, 230), thickness=2, circle_radius=2),
-        )
+        dibujar_landarmks(image, results)
 
         tiempo_segundos = FRAME_NUMBER / FPS
-
         pose_row_cartesian = {
             "frame_number": FRAME_NUMBER,
             "tiempo(seg)": tiempo_segundos,
@@ -472,13 +485,7 @@ def track_pose(video_path, peso_mancuerna):
             momento_pesa = calcular_momento_pesa(masa_pesa, results)
 
         else:
-            for landmark in landmarks_of_interest:
-                pose_row_cartesian[landmark.name + "_x(m)"] = None
-                pose_row_cartesian[landmark.name + "_y(m)"] = None
-            pose_row_cartesian["Angulo"] = None
-            pose_row_cartesian["Velocidad_angular"] = None
-            pose_row_cartesian["Momento_pesa"] = None
-            pose_row_cartesian["Distancia_recorrida(m)"] = None
+            recolectar_datos_de_la_pose_no_results(pose_row_cartesian, landmarks_of_interest)
 
         # Contador de repeticiones
         repeticiones, previous_Y = calcular_repeticiones(
