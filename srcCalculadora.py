@@ -8,7 +8,8 @@ import mediapipe as mp
 from scipy.ndimage import uniform_filter1d 
 from scipy.signal import savgol_filter
 
-#CONSTANTES
+# -- CONSTANTES --
+
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
 video_ready_callback = None
