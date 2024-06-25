@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import mediapipe as mp
 from scipy.ndimage import uniform_filter1d  # Importar para suavizado
+from scipy.signal import savgol_filter
 
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
@@ -50,6 +51,8 @@ def track_pose(video_path, peso_mancuerna):
 
     FRAME_NUMBER = 0
     repeticiones = 0
+    calorias_quemadas = 0
+    calorias_quemadas_dif = 0
     previous_Y = None
     previous_wrist_x = None
     previous_wrist_y = None
@@ -109,6 +112,26 @@ def track_pose(video_path, peso_mancuerna):
             12,
             cv2.LINE_AA,
         )
+        cv2.putText(
+            image,
+            f"Calorias quemadas: {calorias_quemadas}",
+            (50, int(cap.get(4)) - 100),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (0, 0, 0),
+            12,
+            cv2.LINE_AA,
+        )
+        cv2.putText(
+            image,
+            f"Calorias quemadas dif: {calorias_quemadas_dif}",
+            (50, int(cap.get(4)) - 150),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (0, 0, 0),
+            12,
+            cv2.LINE_AA,
+        )
 
         # Datos en video
         cv2.putText(
@@ -135,6 +158,26 @@ def track_pose(video_path, peso_mancuerna):
             image,
             f"Repeticiones: {repeticiones}",
             (50, int(cap.get(4)) - 50),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (255, 255, 255),
+            3,
+            cv2.LINE_AA,
+        )
+        cv2.putText(
+            image,
+            f"Calorias quemadas: {calorias_quemadas}",
+            (50, int(cap.get(4)) - 100),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (255, 255, 255),
+            3,
+            cv2.LINE_AA,
+        )
+        cv2.putText(
+            image,
+            f"Calorias quemadas dif: {calorias_quemadas_dif}",
+            (50, int(cap.get(4)) - 150),
             cv2.FONT_HERSHEY_SIMPLEX,
             1,
             (255, 255, 255),
@@ -228,12 +271,8 @@ def track_pose(video_path, peso_mancuerna):
                     )
                 )
             )
-            pose_row_cartesian["Momento_pesa"] = momento_pesa
-
-            pose_row_cartesian["Contraccion_bicep"] = (
-                calcular_tamano_bicep_con_contraccion(pose_row_cartesian["Angulo"])
-            )
             
+
             # Calcular la distancia recorrida por la pesa (muñeca) desde el frame anterior
             if previous_wrist_x is not None and previous_wrist_y is not None:
                 distancia_recorrida = math.sqrt(
@@ -254,7 +293,9 @@ def track_pose(video_path, peso_mancuerna):
             pose_row_cartesian["Velocidad_angular"] = None
             pose_row_cartesian["Momento_pesa"] = None
             pose_row_cartesian["Distancia_recorrida(m)"] = None
-
+         
+   
+        
         # Contador de repeticiones
         if previous_Y is not None:
             current_Y = pose_row_cartesian[
@@ -273,14 +314,42 @@ def track_pose(video_path, peso_mancuerna):
             [pose_data_cartesian, pd.DataFrame([pose_row_cartesian])], ignore_index=True
         )
 
+
+        
+        pose_data_cartesian["Momento_pesa"] = momento_pesa
+        pose_data_cartesian["dif_angular"] = pose_data_cartesian["Angulo"].diff()
+        pose_data_cartesian["dif_temporal"] = pose_data_cartesian["tiempo(seg)"].diff()
+        pose_data_cartesian["Velocidad_angular"] = abs(pose_data_cartesian["dif_angular"] / pose_data_cartesian["dif_temporal"])
+        pose_data_cartesian["dif_velocidad_angular"] = pose_data_cartesian["Velocidad_angular"].diff() 
+        pose_data_cartesian["Aceleracion_angular"] = abs(pose_data_cartesian["dif_velocidad_angular"] / pose_data_cartesian["dif_temporal"])
+        pose_data_cartesian["dif_x"] = pose_data_cartesian["LEFT_WRIST_x(m)"].diff()
+        pose_data_cartesian["dif_y"] = pose_data_cartesian["LEFT_WRIST_y(m)"].diff()
+        pose_data_cartesian["velocidad_munieca"] = (np.sqrt(pose_data_cartesian["dif_x"] ** 2 + pose_data_cartesian["dif_y"] ** 2) / pose_data_cartesian["dif_temporal"] )
+        pose_data_cartesian["Energia_cinetica"] = (0.5 * masa_pesa) * ((pose_data_cartesian["velocidad_munieca"]) ** 2)
+        pose_data_cartesian["Energia_potencial"] = (masa_pesa)* 9.8* (pose_data_cartesian["Left_Wrist_y(m)_Sin_Modificar"]-pose_data_cartesian["Left_Wrist_y(m)_Sin_Modificar"].first_valid_index())
+        calcularFuerzaBicep(pose_data_cartesian, masa_pesa)
+        pose_data_cartesian["Energia_Mecanica"] = pose_data_cartesian["Energia_cinetica"] + pose_data_cartesian["Energia_potencial"]
+
+        pose_data_cartesian["Trabajo_bicep"] = (pose_data_cartesian["Fuerza_bicep"]* pose_data_cartesian["Distancia_recorrida(m)"])
+        pose_data_cartesian["Trabajo_bicep_dif"] = pose_data_cartesian["Energia_Mecanica"].diff()
+
+        pose_data_cartesian["Trabajo_bicep_dif_positivo"] = pose_data_cartesian["Trabajo_bicep_dif"].apply(lambda x: x if x > 0 else 0)
+        pose_data_cartesian["Trabajo_bicep_positivo"] = pose_data_cartesian["Trabajo_bicep"].apply(lambda x: x if x > 0 else 0)
+       
+        
         FRAME_NUMBER += 1
+
+        # Calcular las calorias quemadas
+        calorias_quemadas = round(pose_data_cartesian["Trabajo_bicep_positivo"].sum() / 4184, 2)
+        calorias_quemadas_dif = round(pose_data_cartesian["Trabajo_bicep_dif_positivo"].sum() / 4184, 2)
+        #pose_data_cartesian = suavizar_dataframe(pose_data_cartesian, max_window_length=11, polyorder=2)
+        
 
     pose.close()
     video_writer.release()
     cap.release()
 
-    # Suavizar la columna "Angulo"
-    pose_data_cartesian["Angulo"] = uniform_filter1d(pose_data_cartesian["Angulo"].dropna(), size=10)
+    
 
     # Guardar los DataFrames como archivos CSV
     pose_data_cartesian.to_csv(OUTPUT_CSV_PATH, index=False)
@@ -330,35 +399,28 @@ def calcularFuerzaBicep(dataframe, masa_pesa):
     ))
 
 
-def calcular_tamano_bicep_con_contraccion(angulo):
-
-    # Estimamos la que contraccion del bicep como un %35 del largo del bicep, por lo tanto si tomamos un bicep de tamaño 0.3m,
-    # la contraccion maxima seria de 0.105m (10.5cm) y la minima de 0m (completamente estirado)
-    # Por lo tanto, la longitud del bicep en base al angulo se calcula como:
-    # longitud_bicep_contraido + proporcion_contraccion * (longitud_bicep_estirado - longitud_bicep_contraido)
-
-    # Longitud del bíceps cuando está completamente estirado y contraído
-    longitud_bicep_estirado = LARGO_ANTEBRAZO  # en m
-    longitud_bicep_contraido = 0.195  # en m
-    # Supongamos que la contracción máxima ocurre a π radianes (180 grados)
-    angulo_max_contraccion = np.pi  # radianes (180 grados)
-
-    # Calcular la proporción de contracción basada en el ángulo
-    proporcion_contraccion = angulo / angulo_max_contraccion
-
-    # Calcular la longitud actual del bíceps
-    longitud_actual = longitud_bicep_contraido + proporcion_contraccion * (
-        longitud_bicep_estirado - longitud_bicep_contraido
-    )
-
-    return longitud_actual
-
 
 # Se calcula el trabajo del bicep en base a la fuerza, la distancia recorrida y el angulo
 # Dado que la velocidad es tangente a la trayectoria y la fuerza del bíceps es perpendicular al antebrazo, el ángulo
 # es 0, luego cos(0)=1
 def calcularTrabajoBicep(dataframe):
-    dataframe["Trabajo_Fuerza_bicep"] = (
+    dataframe["Trabajo_bicep"] = (
         dataframe["Fuerza_bicep"]
         * dataframe["Distancia_recorrida(m)"]
     )
+
+
+def suavizar_dataframe(df, max_window_length=15, polyorder=2):
+    columnas_numericas = df.select_dtypes(include=[float, int]).columns
+    for columna in columnas_numericas:
+            datos_columna = df[columna].fillna(0)
+            # Asegurarse de que window_length no sea mayor que la longitud de la columna y sea un número impar
+            window_length = min(max_window_length, len(datos_columna) if len(datos_columna) % 2 != 0 else len(datos_columna) - 1)
+            if window_length < polyorder + 2:
+                window_length = polyorder + 2
+                if window_length % 2 == 0:
+                    window_length += 1
+            # Aplicar el filtro de Savitzky-Golay solo si la columna tiene datos suficientes
+            if len(datos_columna) > window_length:
+                df[columna] = savgol_filter(datos_columna, window_length, polyorder)
+    return df

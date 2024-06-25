@@ -182,10 +182,10 @@ class VideoPlayerApp:
             "Aceleracion Angular",
             "Fuerza Bicep",
             "Trabajo Bicep",
-            "Contraccion Bicep",
             "Energia cinetica",
             "Energia potencial",
             "Energia mecanica",
+            "Trabajo Bicep dif"
         ]
         self.selected_option = ctk.StringVar(value=self.options[0])
 
@@ -210,10 +210,10 @@ class VideoPlayerApp:
             "Aceleracion Angular": "resultados\\graficos\\aceleracion_angular.png",
             "Fuerza Bicep": "resultados\\graficos\\fuerza_bicep.png",
             "Trabajo Bicep": "resultados\\graficos\\trabajo_bicep.png",
-            "Contraccion Bicep": "resultados\\graficos\\contraccion_bicep.png",
             "Energia cinetica": "resultados\\graficos\\energia_cinetica.png",
             "Energia potencial": "resultados\\graficos\\energia_potencial.png",
             "Energia mecanica": "resultados\\graficos\\energia_mecanica.png",
+            "Trabajo Bicep dif": "resultados\\graficos\\trabajo_bicep_dif.png"
         }
         self.load_image(image_paths.get(value, "loadImage.png"))
         self.show_image()
@@ -405,55 +405,6 @@ class VideoPlayerApp:
     def calcularVelocidadAceleracion(self):
         dataframe = pd.read_csv("resultados/documents/data.csv", index_col=[0])
         inercia_pesa = (1 * 0.3**2) / 12
-        # Calcular la diferencia angular y temporal
-        dataframe["dif_angular"] = dataframe["Angulo"].diff()
-        dataframe["dif_temporal"] = dataframe["tiempo(seg)"].diff()
-
-        # Calcular la velocidad angular
-        dataframe["Velocidad_angular"] = abs(
-            dataframe["dif_angular"] / dataframe["dif_temporal"]
-        )
-
-        # Calcular la diferencia de la velocidad angular y la aceleración angular
-        dataframe["dif_velocidad_angular"] = dataframe["Velocidad_angular"].diff()
-        dataframe["Aceleracion_angular"] = abs(
-            dataframe["dif_velocidad_angular"] / dataframe["dif_temporal"]
-        )
-
-        # Calcular velocidad mancuerna
-        # Vi = sqrt(xi-xi-1)^2 + (yi-yi-1)^2 / (ti-ti-1)
-        dataframe["dif_x"] = dataframe["LEFT_WRIST_x(m)"].diff()
-        dataframe["dif_y"] = dataframe["LEFT_WRIST_y(m)"].diff()
-        dataframe["velocidad_munieca"] = (
-            np.sqrt(dataframe["dif_x"] ** 2 + dataframe["dif_y"] ** 2)
-            / dataframe["dif_temporal"]
-        )
-
-        # Calculo las Energias
-        # Energia cinetica
-        dataframe["Energia_cinetica"] = (
-            0.5 * float(self.masa_entry.get()) * ((dataframe["velocidad_munieca"]) ** 2)
-        )
-        # Energia potencial
-        dataframe["Energia_potencial"] = (
-            float(self.masa_entry.get())
-            * 9.8
-            * (
-                dataframe["Left_Wrist_y(m)_Sin_Modificar"]
-                - dataframe["Left_Wrist_y(m)_Sin_Modificar"].first_valid_index()
-            )
-        )
-        # Suma de las energias
-        dataframe["Energia_Mecanica"] = (
-            dataframe["Energia_cinetica"] + dataframe["Energia_potencial"] * 0.000239006
-        )
-
-        # Calcula la fuerza del bicep
-        srcCalculadora.calcularFuerzaBicep(dataframe, float(self.masa_entry.get()))
-        
-        # Calcula el trabajo de la fuerza del bicep
-        srcCalculadora.calcularTrabajoBicep(dataframe)
-
         # Eliminar filas con valores NaN
         dataframe.dropna(inplace=True)
 
@@ -468,11 +419,11 @@ class VideoPlayerApp:
             dataframe["Velocidad_angular"],
             dataframe["Aceleracion_angular"],
             dataframe["Fuerza_bicep"],
-            dataframe["Trabajo_Fuerza_bicep"],
-            dataframe["Contraccion_bicep"],
+            dataframe["Trabajo_bicep"],
             dataframe["Energia_cinetica"],
             dataframe["Energia_potencial"],
             dataframe["Energia_Mecanica"],
+            dataframe["Trabajo_bicep_dif"]
         ]
         titulos = [
             "Posicion X Muneca",
@@ -482,10 +433,10 @@ class VideoPlayerApp:
             "Aceleracion Angular",
             "Fuerza Bicep",
             "Trabajo Bicep",
-            "Contraccion Bicep",
             "Energia cinetica",
             "Energia potencial",
             "Energia mecanica",
+            "Trabajo Bicep dif"
         ]
         unidades = [
             "m",
@@ -495,10 +446,10 @@ class VideoPlayerApp:
             "rad/seg^2",
             "Newton",
             "J",
-            "m",
             "J",
             "J",
-            "Kcal",
+            "J",
+            "J"
         ]
 
         self.generarGraficos(tiempo, datos, titulos, unidades)
