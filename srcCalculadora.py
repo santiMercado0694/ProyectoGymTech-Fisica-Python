@@ -53,13 +53,7 @@ def calcularFuerzaBicep(dataframe, masa_pesa):
         -((dataframe["suma_momentos"] - dataframe["Momento_pesa"]) / (RADIO_BICEP))
     )
 
-# Funcion que calcula el trabajo del bicep en base a la fuerza, la distancia recorrida y el angulo
-# Dado que la velocidad es tangente a la trayectoria y la fuerza del bíceps es perpendicular al antebrazo, el ángulo
-# es 0, luego cos(0)=1
-def calcularTrabajoBicep(dataframe):
-    dataframe["Trabajo_bicep"] = (
-        dataframe["Fuerza_bicep"] * dataframe["Distancia_recorrida(m)"]
-    )
+
 
 # Funcion que reliza el suavizado de los graficos
 def suavizar_dataframe(df, max_window_length=5, polyorder=2):
@@ -161,7 +155,7 @@ def mostrar_datos_en_video(
     )
     cv2.putText(
         imagen,
-        f"Calorias quemadas: {calorias_quemadas_ej}",
+        f"Calorias quemadas (Kcal): {calorias_quemadas_ej}",
         (50, int(CAP.get(4)) - 100),
         cv2.FONT_HERSHEY_SIMPLEX,
         1,
@@ -169,16 +163,7 @@ def mostrar_datos_en_video(
         12,
         cv2.LINE_AA,
     )
-    cv2.putText(
-        imagen,
-        f"Calorias quemadas dif: {calorias_quemadas_ej_dif}",
-        (50, int(CAP.get(4)) - 150),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        1,
-        (0, 0, 0),
-        12,
-        cv2.LINE_AA,
-    )
+
 
     # Datos en video
     cv2.putText(
@@ -213,7 +198,7 @@ def mostrar_datos_en_video(
     )
     cv2.putText(
         imagen,
-        f"Calorias quemadas: {calorias_quemadas_ej}",
+        f"Calorias quemadas (Kcal): {calorias_quemadas_ej}",
         (50, int(CAP.get(4)) - 100),
         cv2.FONT_HERSHEY_SIMPLEX,
         1,
@@ -221,16 +206,7 @@ def mostrar_datos_en_video(
         3,
         cv2.LINE_AA,
     )
-    cv2.putText(
-        imagen,
-        f"Calorias quemadas dif: {calorias_quemadas_ej_dif}",
-        (50, int(CAP.get(4)) - 150),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        1,
-        (255, 255, 255),
-        3,
-        cv2.LINE_AA,
-    )
+
 
 # Funcion para recolectar los datos de la pose (coordenadas cartesianas) en el DataFrame
 def recolectar_datos_de_la_pose(
@@ -331,30 +307,22 @@ def crear_dataframe(landmarks_of_interest):
     return pose_data_cartesian
 
 # Funcion para calcular la cantidad de calorias quemadas a lo largo del ejercicio de biceps
-def calcular_calorias(calorias_quemadas, calorias_quemadas_dif, pose_data_cartesian):
+def calcular_calorias(calorias_quemadas, pose_data_cartesian):
     calorias_quemadas = round(
         pose_data_cartesian["Trabajo_bicep_positivo"].sum() / 4184, 2
     )
-    calorias_quemadas_dif = round(
-        pose_data_cartesian["Trabajo_bicep_dif_positivo"].sum() / 4184, 2
-    )
 
-    return calorias_quemadas, calorias_quemadas_dif
+    return calorias_quemadas
 
 # Funcion para cargar los datos del trackeo al CSV
 def cargar_datos_al_csv(pose_data_cartesian, masa_pesa):
     pose_data_cartesian["dif_angular"] = pose_data_cartesian["Angulo"].diff()
     pose_data_cartesian["dif_temporal"] = pose_data_cartesian["tiempo(seg)"].diff()
-    pose_data_cartesian["Velocidad_angular"] = abs(
-        pose_data_cartesian["dif_angular"] / pose_data_cartesian["dif_temporal"]
-    )
+    pose_data_cartesian["Velocidad_angular"] = pose_data_cartesian["dif_angular"] / pose_data_cartesian["dif_temporal"]
     pose_data_cartesian["dif_velocidad_angular"] = pose_data_cartesian[
         "Velocidad_angular"
     ].diff()
-    pose_data_cartesian["Aceleracion_angular"] = abs(
-        pose_data_cartesian["dif_velocidad_angular"]
-        / pose_data_cartesian["dif_temporal"]
-    )
+    pose_data_cartesian["Aceleracion_angular"] = pose_data_cartesian["dif_velocidad_angular"] / pose_data_cartesian["dif_temporal"]
     pose_data_cartesian["dif_x"] = pose_data_cartesian["LEFT_WRIST_x(m)"].diff()
     pose_data_cartesian["dif_y"] = pose_data_cartesian["LEFT_WRIST_y(m)"].diff()
     pose_data_cartesian["velocidad_munieca"] = (
@@ -383,20 +351,14 @@ def cargar_datos_al_csv(pose_data_cartesian, masa_pesa):
         + pose_data_cartesian["Energia_potencial"]
     )
 
-    pose_data_cartesian["Trabajo_bicep"] = (
-        pose_data_cartesian["Fuerza_bicep"]
-        * pose_data_cartesian["Distancia_recorrida(m)"]
-    )
-    pose_data_cartesian["Trabajo_bicep_dif"] = pose_data_cartesian[
+    pose_data_cartesian["Trabajo_bicep"] = pose_data_cartesian[
         "Energia_Mecanica"
     ].diff()
 
-    pose_data_cartesian["Trabajo_bicep_dif_positivo"] = pose_data_cartesian[
-        "Trabajo_bicep_dif"
-    ].apply(lambda x: x if x > 0 else 0)
     pose_data_cartesian["Trabajo_bicep_positivo"] = pose_data_cartesian[
         "Trabajo_bicep"
-    ].apply(lambda x: x if x > 0 else 0)
+    ].apply(lambda x: x if x > 0 else -x)
+    
 
 
 # Funcion Principal
@@ -503,7 +465,7 @@ def track_pose(video_path, peso_mancuerna):
         FRAME_NUMBER += 1
 
         # Calcular las calorias quemadas
-        calorias_quemadas, calorias_quemadas_dif = calcular_calorias(calorias_quemadas, calorias_quemadas_dif, pose_data_cartesian)
+        calorias_quemadas = calcular_calorias(calorias_quemadas, pose_data_cartesian)
 
         #Suavizo los graficos
         pose_data_cartesian = suavizar_dataframe(pose_data_cartesian, max_window_length=5, polyorder=2)

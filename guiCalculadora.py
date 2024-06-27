@@ -185,7 +185,6 @@ class VideoPlayerApp:
             "Energia cinetica",
             "Energia potencial",
             "Energia mecanica",
-            "Trabajo Bicep dif"
         ]
         self.selected_option = ctk.StringVar(value=self.options[0])
 
@@ -213,7 +212,6 @@ class VideoPlayerApp:
             "Energia cinetica": "resultados\\graficos\\energia_cinetica.png",
             "Energia potencial": "resultados\\graficos\\energia_potencial.png",
             "Energia mecanica": "resultados\\graficos\\energia_mecanica.png",
-            "Trabajo Bicep dif": "resultados\\graficos\\trabajo_bicep_dif.png"
         }
         self.load_image(image_paths.get(value, "loadImage.png"))
         self.show_image()
@@ -402,6 +400,40 @@ class VideoPlayerApp:
             print(f"Grafico guardado en {filename}")
             plt.close()
 
+    def generarGraficoCombinado(self, tiempo, dataframe):
+        fig, ax1 = plt.subplots(figsize=(10, 6))
+
+        # Verificación de datos
+        if dataframe.empty or len(tiempo) == 0:
+            print("El dataframe o el tiempo están vacíos.")
+            return
+
+        # Posición en X e Y en el eje y principal (izquierdo)
+        ax1.plot(tiempo, dataframe["LEFT_WRIST_x(m)"], label="Posición X (m)", linestyle='-', color='b', linewidth=2)
+        ax1.plot(tiempo, dataframe["LEFT_WRIST_y(m)"], label="Posición Y (m)", linestyle='-', color='g', linewidth=2)
+        ax1.set_xlabel("Tiempo (seg)", fontsize=14)
+        ax1.set_ylabel("Posición (m)", fontsize=14)
+        ax1.tick_params(axis='y', labelsize=12)
+        ax1.legend(loc="upper left", fontsize=12)
+
+    # Crear segundo eje y para la velocidad y aceleración
+        ax2 = ax1.twinx()
+        ax2.plot(tiempo, dataframe["Velocidad_angular"], label="Velocidad Angular (rad/seg)", linestyle='--', color='r', linewidth=2)
+        ax2.plot(tiempo, dataframe["Aceleracion_angular"], label="Aceleración Angular (rad/seg²)", linestyle='--', color='k', linewidth=2)
+        ax2.set_ylabel("Velocidad y Aceleración (rad/seg y rad/seg²)", fontsize=14)
+        ax2.plot(tiempo, dataframe["Angulo"], label="Angulo del brazo (rad)", linestyle='-.', color='c', linewidth=2)
+        ax2.tick_params(axis='y', labelsize=12)
+        ax2.legend(loc="upper right", fontsize=12)
+
+        fig.tight_layout()
+        ax1.grid(True)
+        plt.title("Gráfico Combinado de Posición, Velocidad y Aceleración Angular", fontsize=16)
+
+        filename = 'resultados/graficos/grafico_combinado.png'
+        plt.savefig(filename)
+        print(f"Grafico combinado guardado en {filename}")
+        plt.close()
+
     def calcularVelocidadAceleracion(self):
         dataframe = pd.read_csv("resultados/documents/data.csv", index_col=[0])
         # Eliminar filas con valores NaN
@@ -422,7 +454,6 @@ class VideoPlayerApp:
             dataframe["Energia_cinetica"],
             dataframe["Energia_potencial"],
             dataframe["Energia_Mecanica"],
-            dataframe["Trabajo_bicep_dif"]
         ]
         titulos = [
             "Posicion X Muneca",
@@ -435,7 +466,6 @@ class VideoPlayerApp:
             "Energia cinetica",
             "Energia potencial",
             "Energia mecanica",
-            "Trabajo Bicep dif"
         ]
         unidades = [
             "m",
@@ -448,10 +478,11 @@ class VideoPlayerApp:
             "J",
             "J",
             "J",
-            "J"
         ]
 
         self.generarGraficos(tiempo, datos, titulos, unidades)
+        self.generarGraficoCombinado(tiempo, dataframe)
+
 
 
 def on_closing():

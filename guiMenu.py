@@ -26,7 +26,7 @@ class MenuApp:
         self.master.geometry("640x360")
 
         # Crear el menú desplegable
-        resoluciones = ["1080p (HD)", "720p (HD)", "480p (SD)", "360p (SD)"]
+        resoluciones = ["1080p (HD)", "720 p (HD)", "480p (SD)", "360p (SD)"]
         self.selected_resolution.set(resoluciones[3])
         self.resolution_menu = ctk.CTkOptionMenu(
             self.master,
