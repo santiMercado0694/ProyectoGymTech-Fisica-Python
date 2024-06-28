@@ -121,7 +121,6 @@ def mostrar_datos_en_video(
     tiempo_en_segundos,
     repeticiones_ejercicio,
     calorias_quemadas_ej,
-    calorias_quemadas_ej_dif,
 ):
     cv2.putText(
         imagen,
@@ -158,7 +157,7 @@ def mostrar_datos_en_video(
         f"Calorias quemadas (Kcal): {calorias_quemadas_ej}",
         (50, int(CAP.get(4)) - 100),
         cv2.FONT_HERSHEY_SIMPLEX,
-        1,
+        0.5,
         (0, 0, 0),
         12,
         cv2.LINE_AA,
@@ -201,7 +200,7 @@ def mostrar_datos_en_video(
         f"Calorias quemadas (Kcal): {calorias_quemadas_ej}",
         (50, int(CAP.get(4)) - 100),
         cv2.FONT_HERSHEY_SIMPLEX,
-        1,
+        0.5,
         (255, 255, 255),
         3,
         cv2.LINE_AA,
@@ -224,7 +223,7 @@ def recolectar_datos_de_la_pose(
         results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].x
     )
     pose_row_cartesian["Left_Wrist_y(m)_Sin_Modificar"] = (
-        results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].y
+        (results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].y) * -1
     )
 
     for landmark in landmarks_of_interest:
@@ -339,15 +338,17 @@ def cargar_datos_al_csv(pose_data_cartesian, masa_pesa):
     pose_data_cartesian["Energia_cinetica"] = (0.5 * masa_pesa) * (
         (pose_data_cartesian["velocidad_munieca"]) ** 2
     )
+    
+    # Encuentra el primer valor válido en la columna
+    Y_inicial = pose_data_cartesian["Left_Wrist_y(m)_Sin_Modificar"].dropna().iloc[0]
+
+    # Calcula la energía potencial restando el primer valor válido
     pose_data_cartesian["Energia_potencial"] = (
-        (masa_pesa)
-        * 9.8
-        * (
-            pose_data_cartesian["Left_Wrist_y(m)_Sin_Modificar"]
-            - pose_data_cartesian[
-                "Left_Wrist_y(m)_Sin_Modificar"
-            ].first_valid_index()
-        )
+    masa_pesa
+    * 9.8
+    * (
+        pose_data_cartesian["Left_Wrist_y(m)_Sin_Modificar"] - Y_inicial
+      )
     )
 
     calcularFuerzaBicep(pose_data_cartesian, masa_pesa)
@@ -375,7 +376,6 @@ def track_pose(video_path, peso_mancuerna):
     FRAME_NUMBER = 0
     repeticiones = 0
     calorias_quemadas = 0
-    calorias_quemadas_dif = 0
     previous_Y = None
     previous_wrist_x = None
     previous_wrist_y = None
@@ -429,8 +429,7 @@ def track_pose(video_path, peso_mancuerna):
             image,
             tiempo_segundos,
             repeticiones,
-            calorias_quemadas,
-            calorias_quemadas_dif,
+            calorias_quemadas
         )
 
         # Guardar el cuadro procesado en el video de salida
