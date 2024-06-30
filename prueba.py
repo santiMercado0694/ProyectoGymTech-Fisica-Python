@@ -3,16 +3,20 @@ import math
 import numpy as np
 
 Promedio_x_munieca = -0.039034449
-ErrorX_munieca = 0.072658137
+ErrorX_munieca = 0.004237752
+
 
 Promedio_y_munieca = -0.208962806
-ErrorY_munieca = 0.077962483
+ErrorY_munieca = 0.004533017
+
 
 Promedio_x_hombro = -0.01621702
-ErrorX_hombro = 0.102053173
+ErrorX_hombro = 0.007541687
+
 
 Promedio_y_hombro = 0.242088395
-ErrorY_hombro = 0.10809871
+ErrorY_hombro = 0.008639661
+
 
 #arctan((y2-y1)/(x2-x1))
 
