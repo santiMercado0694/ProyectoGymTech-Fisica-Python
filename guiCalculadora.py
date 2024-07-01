@@ -345,7 +345,7 @@ class VideoPlayerApp:
     def generarGraficos(self, tiempo, datos, titulos, unidades):
         errory = 0.004
         errorx = 0.004
-        errorangulo = 0.0003
+        errorangulo = 0.03
 
         if not os.path.exists("resultados/graficos"):
             os.makedirs("resultados/graficos")

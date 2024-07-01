@@ -18,20 +18,20 @@ Promedio_y_hombro = 0.242088395
 ErrorY_hombro = 0.008639661
 
 
-#arctan((y2-y1)/(x2-x1))
+#arctan((y1/x1) - arctan(y2/x2))
 
 #X1
 def derivadaAngulo_X1 (x1,y1,x2,y2):
-    return ((y2-y1)/((((y2-y1)**2)/((x2-x1)**2))*((x2-x1)**2)))
+    return (y1/((x1**2)+(y1**2)))
 #X2
 def derivadaAngulo_X2 (x1,y1,x2,y2):
-    return -((y2-y1)/((((y2-y1)**2)/((x2-x1)**2))*((x2-x1)**2)))
+    return -(y2/((x2**2)+(y2**2)))
 #Y1
 def derivadaAngulo_Y1 (x1,y1,x2,y2):
-    return (-1/((x2-x1)*(((y2-y1)**2)/((x2-x1)**2))+1))
+    return -(x1/((y1**2)+(x1**2)))
 #Y2
 def derivadaAngulo_Y2 (x1,y1,x2,y2):
-    return (1/((x2-x1)*(((y2-y1)**2)/((x2-x1)**2))+1))
+    return (x2/((y2**2)+(x2**2)))
 
 
 def medicionIndirectaAngulo():
@@ -42,8 +42,5 @@ def medicionIndirectaAngulo():
     return (derivadaAnguloX1**2)*(ErrorX_munieca**2) + (derivadaAnguloY1**2)*(ErrorY_munieca**2) + (derivadaAnguloX2**2)*(ErrorX_hombro**2) + (derivadaAnguloY2**2)*(ErrorY_hombro**2)
 
 print(math.sqrt(medicionIndirectaAngulo()))
-## RETORNA 0.019204321182864383 grados
-print(np.deg2rad(math.sqrt(medicionIndirectaAngulo())))
-## RETORNA 0.0003351786352514755 radianes
-
+## RETORNA 0.03697078466826649 radianes
 
