@@ -345,7 +345,7 @@ class VideoPlayerApp:
     def generarGraficos(self, tiempo, datos, titulos, unidades):
         errory = 0.004
         errorx = 0.004
-        errorangulo = 0.019
+        errorangulo = 0.0003
 
         if not os.path.exists("resultados/graficos"):
             os.makedirs("resultados/graficos")
@@ -389,7 +389,7 @@ class VideoPlayerApp:
                     alpha=0.3,
                     edgecolor="r",
                     linewidth=1,
-                    label="Error ±0.019",
+                    label="Error ±0.0003",
                 )
 
             # Aumenta el grosor de la línea del gráfico

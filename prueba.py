@@ -42,6 +42,8 @@ def medicionIndirectaAngulo():
     return (derivadaAnguloX1**2)*(ErrorX_munieca**2) + (derivadaAnguloY1**2)*(ErrorY_munieca**2) + (derivadaAnguloX2**2)*(ErrorX_hombro**2) + (derivadaAnguloY2**2)*(ErrorY_hombro**2)
 
 print(math.sqrt(medicionIndirectaAngulo()))
-## RETORNA 0.019204321182864383
+## RETORNA 0.019204321182864383 grados
+print(np.deg2rad(math.sqrt(medicionIndirectaAngulo())))
+## RETORNA 0.0003351786352514755 radianes
 
 
