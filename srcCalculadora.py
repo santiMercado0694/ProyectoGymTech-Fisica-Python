@@ -317,16 +317,11 @@ def calcular_calorias(calorias_quemadas, pose_data_cartesian):
 def cargar_datos_al_csv(pose_data_cartesian, masa_pesa):
     pose_data_cartesian["dif_angular"] = pose_data_cartesian["Angulo"].diff()
     pose_data_cartesian["dif_temporal"] = pose_data_cartesian["tiempo(seg)"].diff()
-    pose_data_cartesian["Velocidad_angular"] = abs(
-        pose_data_cartesian["dif_angular"] / pose_data_cartesian["dif_temporal"]
-    )
+    pose_data_cartesian["Velocidad_angular"] = pose_data_cartesian["dif_angular"] / pose_data_cartesian["dif_temporal"]
     pose_data_cartesian["dif_velocidad_angular"] = pose_data_cartesian[
         "Velocidad_angular"
     ].diff()
-    pose_data_cartesian["Aceleracion_angular"] = abs(
-        pose_data_cartesian["dif_velocidad_angular"]
-        / pose_data_cartesian["dif_temporal"]
-    )
+    pose_data_cartesian["Aceleracion_angular"] = pose_data_cartesian["dif_velocidad_angular"] / pose_data_cartesian["dif_temporal"]
     pose_data_cartesian["dif_x"] = pose_data_cartesian["LEFT_WRIST_x(m)"].diff()
     pose_data_cartesian["dif_y"] = pose_data_cartesian["LEFT_WRIST_y(m)"].diff()
     pose_data_cartesian["velocidad_munieca"] = (
