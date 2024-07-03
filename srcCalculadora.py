@@ -15,7 +15,7 @@ mp_pose = mp.solutions.pose
 video_ready_callback = None
 LARGO_ANTEBRAZO = 0.30
 MASA_ANTEBRAZO = 1.8
-RADIO_BICEP = 0.06
+RADIO_BICEP = 0.08
 GRAVEDAD = 9.81
 
 # -- FUNCIONES AXULIARES --
@@ -45,12 +45,8 @@ def angulo_entre_vectores(codo_pos, muneca_pos, hombro_pos):
 # B= Partícula de masa M a una distancia R del eje de rotación = M * R**2= MASA_PESA * LARGO_ANTEBRAZO ** 2
 # Luego Inercia_total = A+B = ((MASA_ANTEBRAZO/3) + masa_pesa) * (LARGO_ANTEBRAZO ** 2)
 def calcularFuerzaBicep(dataframe, masa_pesa):
-    inercia_total = ((MASA_ANTEBRAZO / 3) + masa_pesa) * (LARGO_ANTEBRAZO**2)
-
-    # Calcular suma de momentos
-    dataframe["suma_momentos"] = inercia_total * dataframe["Aceleracion_angular"]
     dataframe["Fuerza_bicep"] = abs(
-        -((dataframe["suma_momentos"] - dataframe["Momento_pesa"]) / (RADIO_BICEP))
+        -((dataframe["suma_momentos"] - dataframe["Momento_antebrazo"] - dataframe["Momento_pesa"]) / (RADIO_BICEP))
     )
 
 
@@ -111,6 +107,29 @@ def calcular_momento_pesa(pose_row_cartesian, pesa_mancuerna, results):
             )
         )   
     )
+
+    momento_antebrazo = (
+        (MASA_ANTEBRAZO / 2)
+        * GRAVEDAD
+        * (LARGO_ANTEBRAZO / 2)
+        * math.sin(
+            angulo_entre_vectores(
+                (
+                    results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].x,
+                    results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].y,
+                ),
+                (
+                    results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].x,
+                    results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_WRIST].y,
+                ),
+                (
+                    results.pose_landmarks.landmark[mp_pose.PoseLandmark.LEFT_ELBOW].x,
+                    1,
+                ),
+            )
+        )
+    )
+    pose_row_cartesian["Momento_antebrazo"] = momento_antebrazo
     pose_row_cartesian["Momento_pesa"] = momento_de_la_pesa
 
 #Funcion para mostrar los datos en video
@@ -315,6 +334,8 @@ def calcular_calorias(calorias_quemadas, pose_data_cartesian):
 
 # Funcion para cargar los datos del trackeo al CSV
 def cargar_datos_al_csv(pose_data_cartesian, masa_pesa):
+    inercia_total = ((MASA_ANTEBRAZO / 3) + masa_pesa) * (LARGO_ANTEBRAZO**2)
+
     pose_data_cartesian["dif_angular"] = pose_data_cartesian["Angulo"].diff()
     pose_data_cartesian["dif_temporal"] = pose_data_cartesian["tiempo(seg)"].diff()
     pose_data_cartesian["Velocidad_angular"] = pose_data_cartesian["dif_angular"] / pose_data_cartesian["dif_temporal"]
@@ -330,16 +351,18 @@ def cargar_datos_al_csv(pose_data_cartesian, masa_pesa):
         )
         / pose_data_cartesian["dif_temporal"]
     )
-    pose_data_cartesian["Energia_cinetica"] = (0.5 * masa_pesa) * (
-        (pose_data_cartesian["velocidad_munieca"]) ** 2
-    )
+
+    # Calcular suma de momentos
+    pose_data_cartesian["suma_momentos"] = inercia_total * pose_data_cartesian["Aceleracion_angular"]
+
+    pose_data_cartesian["Energia_cinetica"] = (0.5 * inercia_total) * ((pose_data_cartesian["Velocidad_angular"]) ** 2)
     
     # Encuentra el primer valor válido en la columna
     Y_inicial = pose_data_cartesian["Left_Wrist_y(m)_Sin_Modificar"].dropna().iloc[0]
 
     # Calcula la energía potencial restando el primer valor válido
     pose_data_cartesian["Energia_potencial"] = (
-    masa_pesa
+    (MASA_ANTEBRAZO + masa_pesa)
     * 9.8
     * (
         pose_data_cartesian["Left_Wrist_y(m)_Sin_Modificar"] - Y_inicial
