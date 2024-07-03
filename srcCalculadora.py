@@ -5,7 +5,6 @@ import cv2
 import pandas as pd
 import numpy as np
 import mediapipe as mp
-from scipy.ndimage import uniform_filter1d 
 from scipy.signal import savgol_filter
 
 # -- CONSTANTES --
@@ -44,7 +43,7 @@ def angulo_entre_vectores(codo_pos, muneca_pos, hombro_pos):
 # A= Inercia varilla delgada con el eje de rotacion en un extremo (codo)= (1/3) * MASA_ANTEBRAZO * LARGO_ANTEBRAZO ** 2
 # B= Partícula de masa M a una distancia R del eje de rotación = M * R**2= MASA_PESA * LARGO_ANTEBRAZO ** 2
 # Luego Inercia_total = A+B = ((MASA_ANTEBRAZO/3) + masa_pesa) * (LARGO_ANTEBRAZO ** 2)
-def calcularFuerzaBicep(dataframe, masa_pesa):
+def calcularFuerzaBicep(dataframe):
     dataframe["Fuerza_bicep"] = abs(
         -((dataframe["suma_momentos"] - dataframe["Momento_antebrazo"] - dataframe["Momento_pesa"]) / (RADIO_BICEP))
     )
@@ -85,7 +84,7 @@ def dibujar_landarmks(image, results):
     )
 
 # Funcion que calcula el momento de la pesa y se lo agrega al CSV
-def calcular_momento_pesa(pose_row_cartesian, pesa_mancuerna, results):
+def calcular_momentos(pose_row_cartesian, pesa_mancuerna, results):
     momento_de_la_pesa = (
         LARGO_ANTEBRAZO
         * pesa_mancuerna
@@ -369,7 +368,7 @@ def cargar_datos_al_csv(pose_data_cartesian, masa_pesa):
       )
     )
 
-    calcularFuerzaBicep(pose_data_cartesian, masa_pesa)
+    calcularFuerzaBicep(pose_data_cartesian)
     pose_data_cartesian["Energia_Mecanica"] = (
         pose_data_cartesian["Energia_cinetica"]
         + pose_data_cartesian["Energia_potencial"]
@@ -466,7 +465,7 @@ def track_pose(video_path, peso_mancuerna):
 
             # Se calcula el momento de la pesa y se lo agrega al csv
             
-            calcular_momento_pesa(pose_row_cartesian, masa_pesa, results)
+            calcular_momentos(pose_row_cartesian, masa_pesa, results)
 
         else:
             recolectar_datos_de_la_pose_no_results(pose_row_cartesian, landmarks_of_interest)
